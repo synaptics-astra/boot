@@ -1,0 +1,1 @@
+../vs680-default/platform.mk

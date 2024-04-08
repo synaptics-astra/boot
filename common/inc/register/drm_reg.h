@@ -1,0 +1,62 @@
+/*
+ * NDA AND NEED-TO-KNOW REQUIRED
+ *
+ * Copyright © 2013-2018 Synaptics Incorporated. All rights reserved.
+ *
+ * This file contains information that is proprietary to Synaptics
+ * Incorporated ("Synaptics"). The holder of this file shall treat all
+ * information contained herein as confidential, shall use the
+ * information only for its intended purpose, and shall not duplicate,
+ * disclose, or disseminate any of this information in any manner
+ * unless Synaptics has otherwise provided express, written
+ * permission.
+ *
+ * Use of the materials may require a license of intellectual property
+ * from a third party or from Synaptics. This file conveys no express
+ * or implied licenses to any intellectual property rights belonging
+ * to Synaptics.
+ *
+ * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND
+ * SYNAPTICS EXPRESSLY DISCLAIMS ALL EXPRESS AND IMPLIED WARRANTIES,
+ * INCLUDING ANY IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE, AND ANY WARRANTIES OF NON-INFRINGEMENT OF ANY
+ * INTELLECTUAL PROPERTY RIGHTS. IN NO EVENT SHALL SYNAPTICS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, PUNITIVE, OR
+ * CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE USE
+ * OF THE INFORMATION CONTAINED IN THIS DOCUMENT, HOWEVER CAUSED AND
+ * BASED ON ANY THEORY OF LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * NEGLIGENCE OR OTHER TORTIOUS ACTION, AND EVEN IF SYNAPTICS WAS
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. IF A TRIBUNAL OF
+ * COMPETENT JURISDICTION DOES NOT PERMIT THE DISCLAIMER OF DIRECT
+ * DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS' TOTAL CUMULATIVE LIABILITY
+ * TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS.
+ */
+#ifndef _DRM_REG_H_
+#define _DRM_REG_H_
+
+#include "memmap.h"
+#include "drm_sw_spec.h"
+#include "drmdmx.h"
+
+/*
+ * DRM Constent
+ */
+
+#define DRM_REG_BASE			(0x00 + MEMMAP_TSI_REG_BASE)
+#define DRM_DMX_SEC_STAT		(RA_DRMDMX_SECSAT + DRM_REG_BASE)
+#define DRM_SECURITY_STATUS_REG		(RA_SECSTATUS_CFG + DRM_DMX_SEC_STAT)
+#define DRM_DMX_CMD_STAT		(RA_DRMDMX_DTCM + DRM_REG_BASE)
+#define DRM_ROM_CMD_STAT_REG		(RA_DRMROM_CMD_STAT + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_CFG_REG		(RA_DRMROM_CMD_CMD_CFG + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_CRC_REG		(RA_DRMROM_CMD_CMD_DAT0 + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_IMG_SIZE_REG	(RA_DRMROM_CMD_CMD_DAT1 + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_IMG_SRC_ADDR_REG	(RA_DRMROM_CMD_CMD_DAT2 + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_IMG_DST_ADDR_REG	(RA_DRMROM_CMD_CMD_DAT3 + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_RESPONSE_CFG_REG	(RA_DRMROM_CMD_RSP_CFG + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_RESPONSE_CRC_REG	(RA_DRMROM_CMD_RSP_DAT0 + DRM_DMX_CMD_STAT)
+#define DRM_ROM_CMD_RESPONSE_ERR_REG	(RA_DRMROM_CMD_RSP_DAT1 + DRM_DMX_CMD_STAT)
+
+#define DRM_ROM_CMD_STAT_EN		(0x01 << LSb32DRMROM_CMD_STAT_en)
+#define DRM_ROM_CMD_RESPONSE_SUCCEED	(0x00 << LSb32DRMROM_CMD_RSP_DAT1_error)
+
+#endif /* _DRM_REG_H_ */

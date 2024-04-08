@@ -1,0 +1,1 @@
+../vs640-default/platform.mk
