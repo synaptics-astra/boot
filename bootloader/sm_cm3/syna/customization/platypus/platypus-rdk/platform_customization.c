@@ -55,7 +55,7 @@ void board_sdram_refresh(void)
 
 void board_peripheral_assert(void)
 {
-	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE1_ADDR, \
+	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE0_ADDR, \
 			(1 << GPIO_PERI), \
 			(PERI_OFF << GPIO_PERI)) != 0)
 		PRT_ERROR("%s: failed\n", __func__);
@@ -63,7 +63,7 @@ void board_peripheral_assert(void)
 
 void board_peripheral_deassert(void)
 {
-	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE1_ADDR, \
+	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE0_ADDR, \
 			(1 << GPIO_PERI), \
 			(PERI_ON << GPIO_PERI)) != 0)
 		PRT_ERROR("%s: failed\n", __func__);
@@ -71,17 +71,15 @@ void board_peripheral_deassert(void)
 
 void board_soc_poweron(void)
 {
-	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE0_ADDR, \
-			((1 << GPIO_VCPU) | (1 << GPIO_VCORE)), \
-			((VCPU_ON << GPIO_VCPU) | (VCORE_ON << GPIO_VCORE))) != 0)
+	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE0_ADDR,
+		(1 << GPIO_VCPU_VCORE), (VCPU_VCORE_ON << GPIO_VCPU_VCORE)) != 0)
 		PRT_ERROR("%s: failed\n", __func__);
 }
 
 void board_soc_poweroff(void)
 {
-	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE0_ADDR, \
-			((1 << GPIO_VCPU) | (1 << GPIO_VCORE)), \
-			((VCPU_OFF << GPIO_VCPU) | (VCORE_OFF << GPIO_VCORE))) != 0)
+	if(sm_fxl16408_gpios_write(I2C_MASTER_ID, I2C_SLAVE0_ADDR,
+		(1 << GPIO_VCPU_VCORE), (VCPU_VCORE_OFF << GPIO_VCPU_VCORE)) != 0)
 		PRT_ERROR("%s: failed\n", __func__);
 }
 

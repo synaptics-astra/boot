@@ -50,13 +50,18 @@
 #define CRC32_SIZE      (4)
 extern unsigned int crc32(unsigned int crc, unsigned char *buf, unsigned int len);
 
+struct gpt_ent_part {
+	unsigned int part;
+	struct gpt_ent gpt;
+};
+
 /*version table*/
 #define MAX_GPT_ENTRY 128
 #define MAX_ENT_NAME  36
 #define MAX_HDR_SIZE  100
 typedef struct {
 	int num;
-	struct gpt_ent entry[MAX_GPT_ENTRY];
+	struct gpt_ent_part entry[MAX_GPT_ENTRY];
 }gpt_table_t;
 static gpt_table_t gptes;
 /*version table end*/
@@ -64,12 +69,12 @@ static gpt_table_t gptes;
 /*function declaration*/
 static void gpt_convert_efi_name_to_char(char *s, const uint16_t *ent_name, int n);
 
-static void dump_gpt_entry(struct gpt_ent * gpte)
+static void dump_gpt_entry(struct gpt_ent_part * gpte)
 {
 	char ent_name_char[72] = {0};
-	gpt_convert_efi_name_to_char(ent_name_char, gpte->ent_name, sizeof(gpte->ent_name));
+	gpt_convert_efi_name_to_char(ent_name_char, gpte->gpt.ent_name, sizeof(gpte->gpt.ent_name));
 
-	INFO("%s: start=%d, end=%d\n", ent_name_char, gpte->ent_lba_start, gpte->ent_lba_end);
+	INFO("%s: part=%d start=%d, end=%d \n", ent_name_char, gpte->part, gpte->gpt.ent_lba_start, gpte->gpt.ent_lba_end);
 }
 
 void dump_gpt_table(void)
@@ -81,19 +86,24 @@ void dump_gpt_table(void)
 	}
 }
 
-int parse_gpt_table(struct gpt_hdr * hdr, struct gpt_ent * entry)
+int parse_gpt_table(uint8_t part, struct gpt_hdr * hdr, struct gpt_ent * entry)
 {
 	unsigned int i;
 	unsigned int num;
+	struct uuid	unused;
 
-	num = MAX_GPT_ENTRY > hdr->hdr_entries ? hdr->hdr_entries : MAX_GPT_ENTRY;
+	num = (MAX_GPT_ENTRY - gptes.num) > hdr->hdr_entries ? hdr->hdr_entries : (MAX_GPT_ENTRY - gptes.num);
 
-	gptes.num = 0;
+	memset(&unused, 0, sizeof(unused));
 	for(i = 0;i < num; i++) {
+		if (memcmp(&unused, &entry[i], sizeof(unused)) == 0)
+			continue;
 
-		memcpy(&(gptes.entry[i]), &entry[i], sizeof(struct gpt_ent));
+		gptes.entry[gptes.num].part = part;
+		memcpy(&(gptes.entry[gptes.num].gpt), &entry[i], sizeof(struct gpt_ent));
 		gptes.num ++;
 	}
+
 	return 0;
 }
 
@@ -134,6 +144,7 @@ int get_gpt(void * tbuff)
 	long long start = START_ADDR_GPT;
 	struct gpt_hdr * hdr = NULL;
 	struct gpt_ent * entry = NULL;
+	int i = 0;
 
 //primary_gpt:
 	//emmc only now
@@ -141,6 +152,7 @@ int get_gpt(void * tbuff)
 		ERR("read primary gpt error\n");
 		goto alt_gpt;
 	}
+
 	hdr = (struct gpt_hdr *)(buff + GPT_HEADER_OFFSET);
 	entry = (struct gpt_ent *)(buff + GPT_TABLE_OFFSET);
 
@@ -172,10 +184,32 @@ gpt_load_done:
 
 	//crc verification
 
-	ret = parse_gpt_table(hdr, entry);
+	ret = parse_gpt_table(0, hdr, entry);
 
 	if(ret != 0) {
 		ERR("parse partiton info error\n");
+	}
+
+	//eMMC only, check 4 GPPs
+	start = START_ADDR_GPT;
+	for (i = 0; i < 4; i++) {
+		if(read_flash_from_part(4 + i, start, GPT_ALT_READ_SIZE, buff) == 0) {
+			hdr = (struct gpt_hdr *)(buff + GPT_HEADER_OFFSET);
+			entry = (struct gpt_ent *)(buff + GPT_TABLE_OFFSET);
+
+			if(memcmp(hdr->hdr_sig, GPT_HDR_SIG, 8) || hdr->hdr_revision != GPT_HDR_REVISION) {
+				ERR("gpt header data corrupted!\n");
+				continue;
+			}
+
+			if (hdr->hdr_size > MAX_HDR_SIZE) {
+				ERR("hdr size too large!\n");
+				continue;
+			}
+			parse_gpt_table(4 + i, hdr, entry);
+		} else {
+			break;
+		}
 	}
 	return 0;
 
@@ -222,10 +256,11 @@ int find_partition(const char * name)
 	char ent_name_char[72] = {0};
 
 	for(i = 0; i < gptes.num; i++) {
-		gpt_convert_efi_name_to_char(ent_name_char, gptes.entry[i].ent_name, sizeof(gptes.entry[i].ent_name));
+		gpt_convert_efi_name_to_char(ent_name_char, gptes.entry[i].gpt.ent_name, sizeof(gptes.entry[i].gpt.ent_name));
 		if(strnlen(name, MAX_ENT_NAME) != strnlen(ent_name_char, MAX_ENT_NAME))
 			continue;
 		if(memcmp(name, ent_name_char, strnlen(name, MAX_ENT_NAME)) == 0) {
+			switch_flash_part(gptes.entry[i].part);
 			return i;
 		}
 	}
@@ -236,7 +271,7 @@ int find_partition(const char * name)
 int fetch_partition_info(int num, struct gpt_ent *gpte)
 {
 	if((num >= 0) && (num < gptes.num)) {
-		memcpy(gpte, &(gptes.entry[num]), sizeof(struct gpt_ent));
+		memcpy(gpte, &(gptes.entry[num].gpt), sizeof(struct gpt_ent));
 		return num;
 	}
 	return PARTITION_NOT_EXIST;
@@ -277,10 +312,6 @@ long long read_image_from_offset(struct gpt_ent *gpte, unsigned int pt_offset, u
 			(start + size), end);
 		return -1;
 	}
-
-	//For EMMC:switch to user area
-	//For nand and nor: nothing
-	switch_flash_part(0);
 
 	return read_flash(start, size, image_buf);
 }

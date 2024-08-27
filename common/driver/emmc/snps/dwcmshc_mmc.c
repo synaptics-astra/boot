@@ -1312,8 +1312,8 @@ int do_emmc_switch_part(unsigned int PartNum)
 		return FLASH_OP_ERR;
 	}
 
-	if(mmc_set_ext_csd(CMD_EXTCSD_PARTITION_CONFIG, SET_BITS, (PartNum & 0x3))){
-		ERR("EMMC: switch to boot partion %d error.\n", PartNum);
+	if(mmc_set_ext_csd(CMD_EXTCSD_PARTITION_CONFIG, SET_BITS, (PartNum & 0x7))){
+		INFO("EMMC: can't switch to partion %d\n", PartNum);
 		return FLASH_OP_ERR;
 	}
 

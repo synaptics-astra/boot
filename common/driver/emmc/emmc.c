@@ -62,7 +62,7 @@ static int init_emmc(int dev)
 // part 0(user area), 1(b1), 2(b2)
 static loff_t switch_emmc_part(unsigned int part)
 {
-	if(part > 2)
+	if(part > 8)
 		return FLASH_SWITCH_PART_NOEXIST;
 
 	if(current_part != part)
@@ -71,7 +71,7 @@ static loff_t switch_emmc_part(unsigned int part)
 		return 0; // if we have switched to this part, just return
 
 	if(do_emmc_switch_part(part)){
-		ERR("EMMC: switch to boot partion %d error.\n", part);
+		INFO("EMMC: can't switch to partion %d.\n", part);
 		return FLASH_OP_ERR;
 	}
 	return 0;

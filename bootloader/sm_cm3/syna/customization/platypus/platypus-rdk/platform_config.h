@@ -45,32 +45,27 @@
 #define I2C_SLAVE1_ADDR 	0x44
 
 /* I2C expander GPIO0 */
-#define GPIO_VCORE    1
-#define VCORE_ON      0
-#define VCORE_OFF     1
-
-#define GPIO_VCPU     0
-#define VCPU_ON       0
-#define VCPU_OFF      1
+#define GPIO_VCPU_VCORE    0
+#define VCPU_VCORE_ON      0
+#define VCPU_VCORE_OFF     1
 
 #define GPIO_VDDM     2
 #define VDDM_ON       0
 #define VDDM_OFF      1
 
-/* I2C expander GPIO1 */
-#define GPIO_PERI     7
+#define GPIO_PERI     4
 #define PERI_ON       0
 #define PERI_OFF      1
 
-#define GPIO_WIFI     3
+/* I2C expander GPIO1 */
+#define GPIO_WIFI     2
 #define WIFI_ON       1
 #define WIFI_OFF      0
 
 #define SM_GPIO_PORT_DDR_CTRL GPIO_VDDM
 
-/* SM_GPIO4 is for WiFi and SM_GPIO7 is for BT*/
-#define SM_GPIO_PORT_WIFI   4
-#define SM_GPIO_PORT_BT     7
+/* SM_GPIO7 is shared between WiFi BT and PCIe*/
+#define SM_GPIO_PORT_WIFIBT   7
 /* There is no GEPHY in VS640*/
 //#define SM_GPIO_PORT_GEPHY 7
 

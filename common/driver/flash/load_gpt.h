@@ -101,7 +101,7 @@
 #define UUID_STR_LEN	37
 
 void dump_gpt_table(void);
-int parse_gpt_table(struct gpt_hdr * hdr, struct gpt_ent * entry);
+int parse_gpt_table(uint8_t part, struct gpt_hdr * hdr, struct gpt_ent * entry);
 void uuid_to_str(char *s, size_t len, const struct uuid *u);
 int get_gpt(void * tbuff);
 int find_partition(const char * name);

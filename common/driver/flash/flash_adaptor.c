@@ -123,7 +123,7 @@ long long read_flash_from_part(unsigned int part, long long start, unsigned int 
 	//switch to specific part
 	part_addr = switch_flash_part(part);
 	if(part_addr < 0) {
-		ERR("flash: error when switch to boot partion %d(err = %d).\n", part, part_addr);
+		NOTICE("flash: can't switch to partion %d\n", part);
 		return FLASH_OP_ERR;
 	}
 	return read_flash((part_addr + start), size, buff);
