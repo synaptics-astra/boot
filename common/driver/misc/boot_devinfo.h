@@ -39,26 +39,17 @@
 #ifndef _boot_message_H
 #define _boot_message_H
 
+#ifdef CONFIG_ANDROID_BOOTCTL
+#include "android_bootloader_message.h"
+#define SYNA_SPACE_OFFSET_IN_MISC	2048
+#define misc_boot_ctrl bootloader_control
+#define misc_slot_metadata slot_metadata
+#define BOOTCTRL_MAGIC BOOT_CTRL_MAGIC
+#define MISC_BOOT_CONTROL_VERSION BOOT_CTRL_VERSION
+#else
+#define SYNA_SPACE_OFFSET_IN_MISC   4096
 #define BOOTCTRL_MAGIC             0x42424100
-#define BOOTCTRL_SUFFIX_A          "_a"
-#define BOOTCTRL_SUFFIX_B          "_b"
-#define BOOT_CONTROL_VERSION       1
 #define MISC_BOOT_CONTROL_VERSION  2
-
-typedef struct slot_metadata {
-	uint8_t priority : 4;
-	uint8_t tries_remaining : 3;
-	uint8_t successful_boot : 1;
-}slot_metadata_t;
-
-typedef struct boot_ctrl {
-	uint32_t magic;		// Magic for identification - '\0ABB' (Boot Contrl Magic)
-	uint8_t version; 		// boot ctrl version, 1
-	slot_metadata_t slot_info[2]; 	// Information about each slot
-	uint8_t slot_a_verity_corrupted:4;
-	uint8_t slot_b_verity_corrupted:4;
-}boot_ctrl_t;
-
 
 typedef struct misc_slot_metadata {
     uint8_t priority;
@@ -114,6 +105,7 @@ typedef struct bootloader_message {
 	char stage[32];
 	char reserved[224];
 } bootloader_message_t;
+#endif
 
 /* Boot Info
  *

@@ -104,6 +104,7 @@ typedef struct __berlin_bootinfo_t {
 	uint32_t		bgs;            /* ATE programmed FE BGS value */
 	uint32_t		soc_temp_id;    /* SOC Temp ID in deg C */
 	uint32_t		cpu_temp_id;    /* CPU Temp ID in deg C */
+	uint8_t			mac_addr[6];	/* MAC address */
 } BERLIN_BOOTINFO;
 
 #endif /* __BERLIN_BOOTINFO_H__ */

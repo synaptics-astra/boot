@@ -77,7 +77,6 @@ static const char kBootcmdFastbootd[]   = "boot-fastboot";
 
 static int Bootmode = BOOTMODE_NORMAL;
 static int BootOptions = 0;
-static bool fts_exist = FALSE;       //fts partition exist
 static bool devinfo_exist = FALSE;   //devinfo partition exist
 
 int init_fts(void)
@@ -175,13 +174,7 @@ static void write_android_bootloader_message(const char *command,
 					const char *status,
 					const char *recovery)
 {
-	if (fts_exist)
-	{
-		if(flash_ts_set(BOOTLOADER_COMMAND_KEY, command))
-			ERR("ERROR: Failed to set bootloader command\n");
-		set_misc_command(command);
-	}
-	else if (devinfo_exist) {
+	if (devinfo_exist) {
 		set_command_to_boot_info(command);
 		set_misc_command(command);
 	}
@@ -195,12 +188,7 @@ int check_bootoptions(void)
 {
 	char boot_option[256] = {0};
 
-	if (fts_exist)
-	{
-		flash_ts_get(BOOTLOADER_OPT_QUIESCENT_KEY, boot_option, (sizeof(boot_option) - 1));
-		boot_option[sizeof(boot_option) - 1] = '\0';
-	}
-	else if (devinfo_exist)
+	if (devinfo_exist)
 	{
 		strcpy(boot_option, get_bootoption_from_boot_info());
 	}
@@ -231,16 +219,7 @@ int set_bootoptions(int opt)
 
 	BootOptions = 0;
 
-	if (fts_exist)
-	{
-		if (opt & BOOTOPTION_QUIESCENT) {
-			flash_ts_set(BOOTLOADER_OPT_QUIESCENT_KEY, "true");
-			BootOptions |= BOOTOPTION_QUIESCENT;
-		} else {
-			flash_ts_set(BOOTLOADER_OPT_QUIESCENT_KEY, "");
-		}
-	}
-	else if (devinfo_exist)
+	if (devinfo_exist)
 	{
 		if (opt & BOOTOPTION_QUIESCENT) {
 			set_bootoption_to_boot_info("true");
@@ -270,12 +249,7 @@ static int check_bootloader_recovery_mode(void)
 {
 	char boot_command[256] = {0};
 
-	if (fts_exist)
-	{
-		flash_ts_get(BOOTLOADER_COMMAND_KEY, boot_command, (sizeof(boot_command) - 1));
-		boot_command[sizeof(boot_command) -1] = '\0';
-	}
-	else if (devinfo_exist) {
+	if (devinfo_exist) {
 		strcpy(boot_command, get_command_from_boot_info());
 	}
 
@@ -296,12 +270,7 @@ static int check_android_bootcommand(void)
 {
 	char boot_command[256] = {0};
 
-	if (fts_exist)
-	{
-		flash_ts_get(BOOTLOADER_COMMAND_KEY, boot_command, (sizeof(boot_command) - 1));
-		boot_command[sizeof(boot_command) -1] = '\0';
-	}
-	else if (devinfo_exist) {
+	if (devinfo_exist) {
 		strcpy(boot_command, get_command_from_boot_info());
 	}
 
@@ -342,25 +311,7 @@ static int check_android_bootcommand(void)
 
 int init_bootmode(void)
 {
-	int num = 0;
-
-	num = find_partition(FTS_NAME);
-	if(num > 0)
-	{
-		struct gpt_ent gpt_fts;
-		fts_exist = TRUE;
-
-		fetch_partition_info(num, &gpt_fts);
-
-		if(gpt_fts.ent_lba_end  < gpt_fts.ent_lba_start) {
-			ERR("entry_lba_start is larger than entry_lba_end! \n");
-			return FLASH_OP_ERR;
-		}
-
-		flash_ts_init((gpt_fts.ent_lba_start)/1024, (gpt_fts.ent_lba_end - gpt_fts.ent_lba_start + 1)/1024);
-	}
-
-	num = find_partition(DEVINFO_NAME);
+	int num = find_partition(DEVINFO_NAME);
 	if(num > 0)
 	{
 		devinfo_exist = TRUE;
@@ -414,10 +365,7 @@ int get_debuglevel_from_flash(void)
 {
 	int dbg_level = 0;
 
-	if(fts_exist) {
-		dbg_level = flash_ts_get_int(FTS_KEY_DEBUG_LEVEL, 0);
-	}
-	else if(devinfo_exist){
+	if(devinfo_exist){
 		dbg_level = get_debuglevel_from_boot_info();
 	}
 
@@ -426,25 +374,15 @@ int get_debuglevel_from_flash(void)
 
 void get_serialno_from_flash(char * serilno_buf)
 {
-	if(serilno_buf) {
-		if(fts_exist) {
-			flash_ts_get(FTS_KEY_SERIALNO, serilno_buf, 64);
-		}
-		else if(devinfo_exist){
-			strcpy(serilno_buf, get_serialno_from_boot_info());
-		}
+	if(serilno_buf && devinfo_exist){
+		strcpy(serilno_buf, get_serialno_from_boot_info());
 	}
 }
 
 void get_macaddr_from_flash(char * mac_addr)
 {
-	if(mac_addr) {
-		if(fts_exist) {
-			flash_ts_get(FTS_KEY_MACADDR, mac_addr, 64);
-		}
-		else if(devinfo_exist){
-			strcpy(mac_addr, get_macaddr_from_boot_info());
-		}
+ 	if(mac_addr && devinfo_exist){
+		strcpy(mac_addr, get_macaddr_from_boot_info());
 	}
 }
 
@@ -465,23 +403,12 @@ int check_fastlogo_start()
  * A/B Mode check *
  *
  ***********************************************/
-
-#define ANDROID_AB_COMMAND_KEY		"bootctrl.metadata"
-#define SYNA_SPACE_OFFSET_IN_MISC   4096
-
-
-
 static int BootAB_sel = BOOTSEL_A;
-static boot_ctrl_t bctrl = {0};
-static misc_boot_ctrl_t misc_bctrl = {0};
+static struct misc_boot_ctrl misc_bctrl __attribute__((aligned(4)))= {0};
 
 static bool is_valid_bootctrl(void)
 {
-	if (fts_exist) {
-		return ((BOOTCTRL_MAGIC == bctrl.magic) &&
-			(BOOT_CONTROL_VERSION == bctrl.version));
-	}
-	else if (devinfo_exist) {
+	if (devinfo_exist) {
 		return ((BOOTCTRL_MAGIC == misc_bctrl.magic) &&
 			(MISC_BOOT_CONTROL_VERSION == misc_bctrl.version));
 	}
@@ -490,18 +417,8 @@ static bool is_valid_bootctrl(void)
 
 static bool slot_is_bootable(int slot_num)
 {
-	if (fts_exist) {
-		slot_metadata_t *pABSlot = &bctrl.slot_info[slot_num];
-		if(slot_num ? bctrl.slot_b_verity_corrupted : bctrl.slot_a_verity_corrupted) {
-			NOTICE("slot_%s is dm-verity corrupted\n", slot_name(slot_num));
-			return 0;
-		}
-		else
-			return (pABSlot->priority > 1 &&
-				(pABSlot->successful_boot || (pABSlot->tries_remaining > 0)));
-	}
-	else if (devinfo_exist) {
-		misc_slot_metadata_t *pABSlot = &misc_bctrl.slot_info[slot_num];
+	if (devinfo_exist) {
+		struct misc_slot_metadata *pABSlot = &misc_bctrl.slot_info[slot_num];
 		return (pABSlot->priority > 1 && pABSlot->verity_corrupted == 0 &&
 			(pABSlot->successful_boot || (pABSlot->tries_remaining > 0)));
 	}
@@ -510,45 +427,28 @@ static bool slot_is_bootable(int slot_num)
 
 static int bootab_slot_select(void)
 {
-	unsigned int bootab_sel = BOOTSEL_DEFAULT;
+	if (devinfo_exist) {
+		if(misc_bctrl.slot_info[0].priority != misc_bctrl.slot_info[1].priority)
+			return (misc_bctrl.slot_info[0].priority - misc_bctrl.slot_info[1].priority) > 0 ? BOOTSEL_A : BOOTSEL_B;
 
-	if (fts_exist) {
-		if(bctrl.slot_info[0].priority >= bctrl.slot_info[1].priority) {
-			bootab_sel = BOOTSEL_A;
-		}
-		else{
-			bootab_sel = BOOTSEL_B;
-		}
-	}
-	else if (devinfo_exist) {
-		if(misc_bctrl.slot_info[0].priority >= misc_bctrl.slot_info[1].priority) {
-			bootab_sel = BOOTSEL_A;
-		}
-		else{
-			bootab_sel = BOOTSEL_B;
-		}
+		if(misc_bctrl.slot_info[0].successful_boot != misc_bctrl.slot_info[1].successful_boot)
+			return (misc_bctrl.slot_info[0].successful_boot - misc_bctrl.slot_info[1].successful_boot) > 0 ? BOOTSEL_A : BOOTSEL_B;
+
+		if(misc_bctrl.slot_info[0].tries_remaining != misc_bctrl.slot_info[1].tries_remaining)
+			return (misc_bctrl.slot_info[0].tries_remaining - misc_bctrl.slot_info[1].tries_remaining) > 0 ? BOOTSEL_A : BOOTSEL_B;
 	}
 
-	return bootab_sel;
+	return BOOTSEL_DEFAULT;
 }
 
 static int write_bootctrl_metadata(void * pbootctrl)
 {
-	char metadata_str[32] = {0};
-
 	if(NULL == pbootctrl) {
 		ERR("ERROR: unvalid bootctrl metadata for write !\n");
 		return -1;
 	}
 
-	if (fts_exist) {
-		snprintf(metadata_str, 17, "%016llx", *((uint64_t *)pbootctrl));
-		if(flash_ts_set(ANDROID_AB_COMMAND_KEY, metadata_str)) {
-			ERR("ERROR: Failed to write bootctrl metadata !\n");
-			return -1;
-		}
-	}
-	else if (devinfo_exist) {
+	if (devinfo_exist) {
 		struct gpt_ent gpt_misc;
 		long long ret;
 		long long start = 0;
@@ -564,9 +464,9 @@ static int write_bootctrl_metadata(void * pbootctrl)
 		/* bootctrl_metadata in misc partition position */
 		start = gpt_misc.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
 
-		memcpy(buff, (unsigned char *)pbootctrl, sizeof(misc_boot_ctrl_t));
+		memcpy(buff, (unsigned char *)pbootctrl, sizeof(struct misc_boot_ctrl));
 
-		ret =write_flash(start, sizeof(misc_boot_ctrl_t), buff);
+		ret =write_flash(start, sizeof(struct misc_boot_ctrl), buff);
 		if(0 != ret){
 			ERR("set misc bootloader message failed.\n");
 			return -1;
@@ -583,24 +483,8 @@ static void init_bootctrl(int default_slot)
 		return;
 	}
 
-	if (fts_exist) {
-		boot_ctrl_t * pbootctrl = &bctrl;
-
-		pbootctrl->slot_info[default_slot].priority        = 8;
-		pbootctrl->slot_info[default_slot].tries_remaining = 2;
-		pbootctrl->slot_info[default_slot].successful_boot = 0;
-
-		pbootctrl->slot_info[1 - default_slot].priority        = 3;
-		pbootctrl->slot_info[1 - default_slot].tries_remaining = 2;
-		pbootctrl->slot_info[1 - default_slot].successful_boot = 0;
-
-		pbootctrl->version = BOOT_CONTROL_VERSION;
-		pbootctrl->magic   = BOOTCTRL_MAGIC;
-
-		write_bootctrl_metadata((void*)pbootctrl);
-	}
-	else if (devinfo_exist) {
-		misc_boot_ctrl_t * pbootctrl = &misc_bctrl;
+	if (devinfo_exist) {
+		struct misc_boot_ctrl * pbootctrl = &misc_bctrl;
 
 		pbootctrl->slot_info[default_slot].priority        = 8;
 		pbootctrl->slot_info[default_slot].tries_remaining = 2;
@@ -626,14 +510,7 @@ static int check_dmverity_device_corrupted(int bootab_sel)
 		bootab_sel_final = (bootab_sel == BOOTSEL_A) ? BOOTSEL_B : BOOTSEL_A;
 
 		if (slot_is_bootable(bootab_sel_final)){
-			if(fts_exist){
-				if(bootab_sel)
-					bctrl.slot_b_verity_corrupted = 1;
-				else
-					bctrl.slot_a_verity_corrupted = 1;
-				write_bootctrl_metadata((void*)&bctrl);
-			}
-			else if(devinfo_exist){
+			if(devinfo_exist){
 				misc_bctrl.slot_info[bootab_sel].verity_corrupted = 1;
 				write_bootctrl_metadata((void*)&misc_bctrl);
 			}
@@ -692,25 +569,7 @@ void force_init_abmode(void)
 
 void init_abmode(void)
 {
-	if(fts_exist) {
-		char ab_command[32] = {0};
-		uint64_t bootctrl_data = 0x0;
-		boot_ctrl_t * pbootctrl = (boot_ctrl_t *)(uintptr_t)(&bootctrl_data);
-
-		memset((void *)&bctrl, 0, sizeof(boot_ctrl_t));
-
-		flash_ts_get(ANDROID_AB_COMMAND_KEY, ab_command, (sizeof(ab_command) - 1));
-		ab_command[sizeof(ab_command) - 1] = '\0';
-		INFO("First fts: %s: %s\n", ANDROID_AB_COMMAND_KEY, ab_command);
-
-		if(strnlen(ab_command, MAX_COMMAND)) {
-			bootctrl_data = strtoul((ab_command), NULL, 16);
-			//Always display below message for bootctrl.metadata recognization
-			NOTICE("-----bootctrl_data:  0x%x-%x-----\n", bootctrl_data >> 32, bootctrl_data);
-			memcpy((void *)&bctrl, (void *)pbootctrl, sizeof(boot_ctrl_t));
-		}
-	}
-	else if(devinfo_exist) {
+	if(devinfo_exist) {
 		long long ret;
 		long long start = 0;
 		int read_size;
@@ -729,7 +588,7 @@ void init_abmode(void)
 		if(0 != ret){
 			ERR("read misc boot control data failed.\n");
 		}
-		memcpy((unsigned char *)&misc_bctrl, buff, sizeof(misc_boot_ctrl_t));
+		memcpy((unsigned char *)&misc_bctrl, buff, sizeof(struct misc_boot_ctrl));
 	}
 }
 
@@ -747,23 +606,7 @@ int get_abmode(void)
 int try_abmode(int abmode_sel)
 {
 	/* ... and decrement tries remaining, if applicable. */
-	if(fts_exist) {
-		if(is_valid_bootctrl() && (bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
-			bctrl.slot_info[abmode_sel].tries_remaining -= 1;
-			write_bootctrl_metadata((void*)&bctrl);
-			return 0;
-		}
-		else if(is_valid_bootctrl()) {
-			bctrl.slot_info[abmode_sel].priority-=2;
-			write_bootctrl_metadata((void*)&bctrl);
-			return -1;
-		}
-		else {
-			// invalid bootctrl metadata
-			return 1;
-		}
-	}
-	else if(devinfo_exist) {
+	if(devinfo_exist) {
 		if(is_valid_bootctrl() && (misc_bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
 			misc_bctrl.slot_info[abmode_sel].tries_remaining -= 1;
 			write_bootctrl_metadata((void*)&misc_bctrl);
@@ -787,9 +630,7 @@ bool check_boot_success(void) {
 	if (BootAB_sel != BOOTSEL_A && BootAB_sel != BOOTSEL_B) {
 		return false;
 	}
-	if (fts_exist) {
-		ret = (bctrl.slot_info[BootAB_sel].successful_boot != 0);
-	} else if (devinfo_exist) {
+	if (devinfo_exist) {
 		ret = (misc_bctrl.slot_info[BootAB_sel].successful_boot != 0);
 	} else {
 		//should never reach here
