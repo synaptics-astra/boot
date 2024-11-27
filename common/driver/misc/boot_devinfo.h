@@ -39,7 +39,7 @@
 #ifndef _boot_message_H
 #define _boot_message_H
 
-#ifdef CONFIG_ANDROID_BOOTCTL
+#ifdef CONFIG_ANDROID_BOOTCTRL
 #include "android_bootloader_message.h"
 #define SYNA_SPACE_OFFSET_IN_MISC	2048
 #define misc_boot_ctrl bootloader_control
