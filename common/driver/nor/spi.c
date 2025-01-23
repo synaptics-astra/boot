@@ -39,13 +39,15 @@
 #include "flash_adaptor.h"
 
 extern void SPIReadFlash(unsigned int, unsigned int, unsigned int);
+extern int spi_write(unsigned int memory, unsigned int offset, int size);
+extern int spi_erase(unsigned int offset, int size);
 
-static void nor_init()
+static int nor_init(int dev)
 {
-	//NULL
+	return 0;
 }
 
-static int nor_switch_part(unsigned int part)
+static loff_t nor_switch_part(unsigned int part)
 {
 	if(part > 1)
 		return FLASH_SWITCH_PART_NOEXIST;
@@ -54,8 +56,19 @@ static int nor_switch_part(unsigned int part)
 	return 0;
 }
 
-static long long nor_read(unsigned int start, unsigned int size, unsigned char *buff)
+static long long nor_erase(long long start, unsigned int size)
 {
+	spi_erase(start, size);
+	return 0;
+}
+
+static long long nor_read(long long start, unsigned int size, unsigned char *buff)
+{
+	if (start > 0x1000000) {
+		ERR("spi offset is too big: %x\n", start);
+		return -1;
+	}
+
 	//we read spi 4bytes by 4bytes
 	int mod = size % 4;
 	size = size/4;
@@ -66,6 +79,13 @@ static long long nor_read(unsigned int start, unsigned int size, unsigned char *
 	return 0;
 }
 
+static long long nor_write(long long start, unsigned int size, unsigned char *buff)
+{
+	spi_write((uintptr_t)buff, start, size);
+	return 0;
+}
+
+
 static int nor_get_boot_partition_number(void)
 {
 	return 1;
@@ -74,6 +94,7 @@ static int nor_get_boot_partition_number(void)
 static void nor_set_parameters(int blocksize, int pagesize, int addrcycle);
 
 struct flash_adaptor g_flash = {
+	.boot_part_size = 0x80000,
 	.block_size = 0x10000,
 	.page_size = 512,
 	.addr_cycle = 0,
@@ -81,7 +102,9 @@ struct flash_adaptor g_flash = {
 	.get_boot_partition_number = nor_get_boot_partition_number,
 	.switch_part = nor_switch_part,
 	.set_parameters = nor_set_parameters,
+	.erase = nor_erase,
 	.read = nor_read,
+	.write = nor_write,
 };
 
 static void nor_set_parameters(int blocksize, int pagesize, int addrcycle)

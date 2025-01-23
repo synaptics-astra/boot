@@ -123,10 +123,12 @@ void uuid_to_str(char *s, size_t len, const struct uuid *u)
 		(u->node[4] << 8) | u->node[5]);
 }
 
+#ifndef SPI_BOOT_LINUX
 #ifndef GET_ALIGNED
 static unsigned get_aligned(unsigned address, unsigned page_size) {
 	return (address + page_size - 1) / page_size * page_size;
 }
+#endif
 #endif
 
 #define START_ADDR_GPT    0x0 //start from MBR
@@ -136,6 +138,38 @@ static unsigned get_aligned(unsigned address, unsigned page_size) {
 #define GPT_TABLE_OFFSET  0x400
 #define GPT_PART_SIZE     0x4000  //GTP TABLE MAXIMUM SIZE 16K
 
+#ifdef SPI_BOOT_LINUX
+#define SPI_PAGE_SIZE     512
+#define SPI_TZK_START     0x80000
+#define SPI_TZK_END       0x110000
+#define SPI_BL_START      SPI_TZK_END
+#define SPI_BL_END        0x1F0000
+
+int get_gpt(void * tbuff) {
+	struct gpt_hdr hdr;
+	struct gpt_ent entry[2];
+
+	hdr.hdr_entries = 2;
+	entry[0].ent_name[0] = 't';
+	entry[0].ent_name[1] = 'z';
+	entry[0].ent_name[2] = 'k';
+	entry[0].ent_name[3] = '\0';
+
+	entry[0].ent_lba_start = SPI_TZK_START/SPI_PAGE_SIZE;
+	entry[0].ent_lba_end = SPI_TZK_END/SPI_PAGE_SIZE;
+
+	entry[1].ent_name[0] = 'b';
+	entry[1].ent_name[1] = 'l';
+	entry[1].ent_name[2] = '\0';
+
+	entry[1].ent_lba_start = SPI_BL_START/SPI_PAGE_SIZE;
+	entry[1].ent_lba_end = SPI_BL_END/SPI_PAGE_SIZE;
+
+	parse_gpt_table(0, &hdr, entry);
+	return 0;
+}
+
+#else
 int get_gpt(void * tbuff)
 {
 	//we need a buff that is at least 64bytes aligned address because of the DMA of EMMC
@@ -217,6 +251,7 @@ gpt_err:
 	ERR("both primary and alt gpt are wrong!\n");
 	return FLASH_OP_ERR;
 }
+#endif
 
 static void gpt_convert_efi_name_to_char(char *s, const uint16_t *ent_name, int n)
 {

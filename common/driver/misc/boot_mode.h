@@ -57,8 +57,6 @@ typedef enum {
 int check_fastboot_mode(void);
 #endif
 
-
-int init_fts(void);
 int init_rts(void);
 int init_bootmode(void);
 

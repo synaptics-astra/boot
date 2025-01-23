@@ -129,6 +129,14 @@ long long read_flash_from_part(unsigned int part, long long start, unsigned int 
 	return read_flash((part_addr + start), size, buff);
 }
 
+long long erase_flash(long long start, unsigned int size)
+{
+	if(g_flash.erase)
+		return g_flash.erase(start, size);
+	else
+		return FLASH_OP_ERR;
+
+}
 
 long long write_flash(long long start, unsigned int size, unsigned char *buff)
 {
