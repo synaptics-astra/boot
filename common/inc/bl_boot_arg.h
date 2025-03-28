@@ -59,7 +59,7 @@ struct bl_boot_arg {
 	unsigned int cpu_tsen_id;	// cpu tsen_id
 	unsigned int chip_revision;	// chip revision: Z1/A0/A1/A2
 	unsigned char mac_addr[6];	// MAC address
-	int boot_slot;			// 0-slotA, 1-slotB, put this to the end
+	int boot_slot;			// PUT TO THE END, 0/0x10-slotA, 1/0x11-slotB
 };
 
 typedef struct {

@@ -98,7 +98,7 @@ int parse_version_table(unsigned char* buff)
 
 	/* check calculated version table size*/
 	if(vt_size >= 2048) {
-		ERR("ERROR: vt_size is too big %d!!!\n", vt_size);
+		DBG("ERROR: vt_size is too big %d!!!\n", vt_size);
 		return FLASH_OP_ERR;
 	}
 
@@ -152,14 +152,14 @@ int get_partition_info(void * tbuff)
 		//read the clear pt only
 		start = get_boot_part_size() - CLEAR_VT_SIZE;
 		if(read_flash_from_part(i, start, CLEAR_VT_SIZE, buff) != 0) {
-			ERR("read partiton info error\n");
+			DBG("read partiton info error\n");
 			continue;
 		}
 
 		ret = parse_version_table(buff);
 
 		if(ret != 0) {
-			ERR("parse partiton info error\n");
+			DBG("parse partiton info error\n");
 			continue;
 		}
 		return 0;

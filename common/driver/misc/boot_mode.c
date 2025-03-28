@@ -54,6 +54,7 @@
 #include "flash_ts.h"
 #include "boot_mode.h"
 #include "boot_devinfo.h"
+#include "bm_generic.h"
 
 #include "system_manager.h"
 #include "mem_map_itcm.h"
@@ -408,9 +409,13 @@ int check_fastlogo_start()
 static int BootAB_sel = BOOTSEL_A;
 static struct misc_boot_ctrl misc_bctrl __attribute__((aligned(4)))= {0};
 
-static bool is_valid_bootctrl(void)
+static bool bootctrl_is_exist(void) {
+	return devinfo_exist || misc_exist;
+}
+
+static bool bootctrl_is_valid(void)
 {
-	if (devinfo_exist || misc_exist) {
+	if (bootctrl_is_exist()) {
 		return ((BOOTCTRL_MAGIC == misc_bctrl.magic) &&
 			(MISC_BOOT_CONTROL_VERSION == misc_bctrl.version));
 	}
@@ -419,7 +424,7 @@ static bool is_valid_bootctrl(void)
 
 static bool slot_is_bootable(int slot_num)
 {
-	if (devinfo_exist || misc_exist) {
+	if (bootctrl_is_exist()) {
 		struct misc_slot_metadata *pABSlot = &misc_bctrl.slot_info[slot_num];
 		return (pABSlot->priority > 1 && pABSlot->verity_corrupted == 0 &&
 			(pABSlot->successful_boot || (pABSlot->tries_remaining > 0)));
@@ -429,7 +434,7 @@ static bool slot_is_bootable(int slot_num)
 
 static int bootab_slot_select(void)
 {
-	if (devinfo_exist || misc_exist) {
+	if (bootctrl_is_exist()) {
 		if(misc_bctrl.slot_info[0].priority != misc_bctrl.slot_info[1].priority)
 			return (misc_bctrl.slot_info[0].priority - misc_bctrl.slot_info[1].priority) > 0 ? BOOTSEL_A : BOOTSEL_B;
 
@@ -450,7 +455,7 @@ static int write_bootctrl_metadata(void * pbootctrl)
 		return -1;
 	}
 
-	if (devinfo_exist || misc_exist) {
+	if (bootctrl_is_exist()) {
 #ifdef CONFIG_VT
 		ver_table_entry_t pt_misc;
 #elif CONFIG_GPT
@@ -499,7 +504,7 @@ static void init_bootctrl(int default_slot)
 		return;
 	}
 
-	if (devinfo_exist || misc_exist) {
+	if (bootctrl_is_exist()) {
 		struct misc_boot_ctrl * pbootctrl = &misc_bctrl;
 
 		memset((void *)pbootctrl, 0, sizeof(struct misc_boot_ctrl));
@@ -550,7 +555,7 @@ static int check_android_abcommand(void)
 {
 	unsigned int bootab_sel = BOOTSEL_DEFAULT;
 
-	if(is_valid_bootctrl()) {
+	if(bootctrl_is_valid()) {
 		if(slot_is_bootable(0) && slot_is_bootable(1)) {
 			bootab_sel = bootab_slot_select();
 		}
@@ -567,11 +572,12 @@ static int check_android_abcommand(void)
 			goto out;
 		}
 	}
-	else {
+	else if (bootctrl_is_exist()) {
 		ERR("No valid metadata for bootctrl, initialize to default slot %d !\n", BOOTSEL_DEFAULT);
 		init_bootctrl(BOOTSEL_DEFAULT);
 		bootab_sel = BOOTSEL_DEFAULT;
-	}
+	} else
+		bootab_sel = GenX_BCM_Get_Boot_Slot();
 
 	bootab_sel = check_dmverity_device_corrupted(bootab_sel);
 
@@ -587,7 +593,7 @@ void force_init_abmode(void)
 
 void init_abmode(void)
 {
-	if (devinfo_exist || misc_exist) {
+	if (bootctrl_is_exist()) {
 		long long ret;
 		long long start = 0;
 		int read_size;
@@ -642,13 +648,13 @@ int get_abmode(void)
 int try_abmode(int abmode_sel)
 {
 	/* ... and decrement tries remaining, if applicable. */
-	if (devinfo_exist || misc_exist) {
-		if(is_valid_bootctrl() && (misc_bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
+	if (bootctrl_is_exist()) {
+		if(bootctrl_is_valid() && (misc_bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
 			misc_bctrl.slot_info[abmode_sel].tries_remaining -= 1;
 			write_bootctrl_metadata((void*)&misc_bctrl);
 			return 0;
 		}
-		else if(is_valid_bootctrl()) {
+		else if(bootctrl_is_valid()) {
 			misc_bctrl.slot_info[abmode_sel].priority-=2;
 			write_bootctrl_metadata((void*)&misc_bctrl);
 			return -1;

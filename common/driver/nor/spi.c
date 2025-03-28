@@ -38,6 +38,9 @@
 
 #include "flash_adaptor.h"
 
+#define SPI_BOOT_PART_NUM 2
+#define SPI_BOOT_PART_SIZE 0x200000
+
 extern void SPIReadFlash(unsigned int, unsigned int, unsigned int);
 extern int spi_write(unsigned int memory, unsigned int offset, int size);
 extern int spi_erase(unsigned int offset, int size);
@@ -49,11 +52,11 @@ static int nor_init(int dev)
 
 static loff_t nor_switch_part(unsigned int part)
 {
-	if(part > 1)
+	if(part > SPI_BOOT_PART_NUM)
 		return FLASH_SWITCH_PART_NOEXIST;
 
 	//if part = 0, return 0
-	return 0;
+	return (part -1) * SPI_BOOT_PART_SIZE;
 }
 
 static long long nor_erase(long long start, unsigned int size)
@@ -88,7 +91,7 @@ static long long nor_write(long long start, unsigned int size, unsigned char *bu
 
 static int nor_get_boot_partition_number(void)
 {
-	return 1;
+	return SPI_BOOT_PART_NUM;
 }
 
 static void nor_set_parameters(int blocksize, int pagesize, int addrcycle);
