@@ -38,6 +38,13 @@
 
 #define FLASH_SWITCH_PART_NOEXIST	(-1)
 #define FLASH_OP_ERR	 	(-2)
+
+enum flash_dev_type {
+	FLASH_DEV_EMMC = 0,
+	FLASH_DEV_SD,
+	FLASH_DEV_SPI,
+};
+
 struct flash_adaptor {
 	size_t boot_part_size;
 	size_t block_size;

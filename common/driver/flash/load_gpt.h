@@ -103,16 +103,11 @@
 void dump_gpt_table(void);
 int parse_gpt_table(uint8_t part, struct gpt_hdr * hdr, struct gpt_ent * entry);
 void uuid_to_str(char *s, size_t len, const struct uuid *u);
-int get_gpt(void * tbuff);
-int find_partition(const char * name);
-int fetch_partition_info(int num, struct gpt_ent *gpte);
+int gpt_find_partition(const char * name);
+int gpt_fetch_partition_info(int num, struct gpt_ent * gpte);
+long long gpt_read_image(struct gpt_ent * gpte, unsigned int image_size, unsigned char * image_buff);
+long long gpt_read_image_by_ptname(const char *module_name, unsigned int image_size, unsigned char *image_buff);
+long long gpt_write_image(struct gpt_ent * gpte, unsigned int image_size, unsigned char * image_buff);
 unsigned int get_gpt_entry_number();
-long long read_image(struct gpt_ent *gpte, unsigned int image_size, unsigned char *image_buff);
-long long read_image_from_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
-long long read_image_by_ptname(const char *module_name,unsigned int image_size,unsigned char *image_buff);
-long long write_image(struct gpt_ent *gpte, unsigned int image_size, unsigned char *image_buff);
-long long write_image_to_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
-
-int get_partition_info(void * tbuff);
-
+int gpt_get_partition_info(void * tbuff);
 #endif

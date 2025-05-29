@@ -96,7 +96,7 @@ static int nor_get_boot_partition_number(void)
 
 static void nor_set_parameters(int blocksize, int pagesize, int addrcycle);
 
-struct flash_adaptor g_flash = {
+struct flash_adaptor spi_g_flash = {
 	.boot_part_size = 0x80000,
 	.block_size = 0x10000,
 	.page_size = 512,
@@ -112,8 +112,8 @@ struct flash_adaptor g_flash = {
 
 static void nor_set_parameters(int blocksize, int pagesize, int addrcycle)
 {
-	g_flash.block_size = 0x10000;
-	g_flash.page_size = 512;
-	g_flash.addr_cycle = 0;
+	spi_g_flash.block_size = 0x10000;
+	spi_g_flash.page_size = 512;
+	spi_g_flash.addr_cycle = 0;
 }
 

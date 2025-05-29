@@ -58,6 +58,7 @@
 
 #include "system_manager.h"
 #include "mem_map_itcm.h"
+#include "flash_partition.h"
 
 #define BOOTLOADER_COMMAND_KEY         "bootloader.command"
 #define BOOTLOADER_OPT_QUIESCENT_KEY   "bootloader.opt.quiescent"
@@ -91,15 +92,11 @@ static int check_misc_command()
 	struct bootloader_message *msg = (struct bootloader_message *)buff;
 	unsigned int read_size = 0;
 	long long ret;
+	union partition_entry pt_misc;
 
-#ifdef CONFIG_VT
-	ver_table_entry_t pt_misc;
-#elif CONFIG_GPT
-	struct gpt_ent pt_misc;
-#endif
-	int num = find_partition(MISC_NAME);
+	int num = get_pt_index(MISC_NAME);
 	if(num >= 0) {
-		fetch_partition_info(num, &pt_misc);
+		get_pt_info(num, &pt_misc);
 	} else {
 		// if no misc,  return normal
 		ERR("find misc partition error!\n");
@@ -108,7 +105,7 @@ static int check_misc_command()
 
 	//read one page to get the size of image stored in the header
 	read_size = (get_page_size() > 2048) ? get_page_size() : 2048;
-	ret = read_image(&pt_misc, read_size, buff);
+	ret = read_pt(&pt_misc, read_size, buff);
 	if(ret){
 		ERR("read misc area data failed.\n");
 		return BOOTMODE_NORMAL;
@@ -135,16 +132,11 @@ static void set_misc_command(const char *command)
 	struct bootloader_message *msg = (struct bootloader_message *)buff;
 	unsigned int read_size = 0;
 	long long ret;
+	union partition_entry pt_misc;
 
-#ifdef CONFIG_VT
-	ver_table_entry_t pt_misc;
-#elif CONFIG_GPT
-	struct gpt_ent pt_misc;
-#endif
-
-	int num = find_partition(MISC_NAME);
+	int num = get_pt_index(MISC_NAME);
 	if(num >= 0) {
-		fetch_partition_info(num, &pt_misc);
+		get_pt_info(num, &pt_misc);
 	} else {
 		ERR("find misc partition error!\n");
 		return;
@@ -152,7 +144,7 @@ static void set_misc_command(const char *command)
 
 	//read 8k bytes header to get the size of image stored in the header
 	read_size = (get_page_size() > 2048) ? get_page_size() : 2048;
-	ret = read_image(&pt_misc, read_size, buff);
+	ret = read_pt(&pt_misc, read_size, buff);
 	if(ret){
 		ERR("read misc area data failed.\n");
 		return;
@@ -162,7 +154,7 @@ static void set_misc_command(const char *command)
 	{
 		memset(msg->command, 0x0, sizeof(msg->command));
 		strcpy(msg->command, command);
-		write_image(&pt_misc, read_size, buff);
+		write_pt(&pt_misc, read_size, buff);
 		if(0 != ret){
 			ERR("set misc bootloader message failed.\n");
 		}
@@ -310,14 +302,14 @@ static int check_android_bootcommand(void)
 
 int init_bootmode(void)
 {
-	int num = find_partition(DEVINFO_NAME);
+	int num = get_pt_index(DEVINFO_NAME);
 	if(num > 0)
 	{
 		devinfo_exist = TRUE;
 		read_boot_info_from_flash();
 	}
 
-	num = find_partition(MISC_NAME);
+	num = get_pt_index(MISC_NAME);
 	if(num > 0)
 		misc_exist = TRUE;
 
@@ -456,18 +448,15 @@ static int write_bootctrl_metadata(void * pbootctrl)
 	}
 
 	if (bootctrl_is_exist()) {
-#ifdef CONFIG_VT
-		ver_table_entry_t pt_misc;
-#elif CONFIG_GPT
-		struct gpt_ent pt_misc;
-#endif
+		union partition_entry pt_misc;
+
 		long long ret;
 		long long start = 0;
-		int num = find_partition(MISC_NAME);
+		int num = get_pt_index(MISC_NAME);
 		unsigned char * buff = (unsigned char *)(TEMP_BUF_ADDR);
 
 		if(num >= 0) {
-			fetch_partition_info(num, &pt_misc);
+			get_pt_info(num, &pt_misc);
 		} else {
 			ERR("find misc partition error!\n");
 		}
@@ -475,19 +464,20 @@ static int write_bootctrl_metadata(void * pbootctrl)
 		memcpy(buff, (unsigned char *)pbootctrl, sizeof(struct misc_boot_ctrl));
 
 		/* bootctrl_metadata in misc partition position */
-#ifdef CONFIG_VT
-		start = pt_misc.part1_start_blkind * get_block_size() + SYNA_SPACE_OFFSET_IN_MISC;
-		ret = erase_flash((start & (~(get_block_size() - 1))), get_block_size());
-		if(0 != ret){
-			ERR("erase misc bootloader message failed.\n");
-			return -1;
+		if (get_pt_type() == FLASH_PARTITION_VT) {
+			start = pt_misc.vt_entry.part1_start_blkind * get_block_size() + SYNA_SPACE_OFFSET_IN_MISC;
+			ret = erase_flash((start & (~(get_block_size() - 1))), get_block_size());
+			if(0 != ret){
+				ERR("erase misc bootloader message failed.\n");
+				return -1;
+			}
+
+			ret =write_flash(start, get_page_size(), buff);
+		} else {
+			start = pt_misc.gpt_entry.gpt.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
+			ret =write_flash(start, sizeof(struct misc_boot_ctrl), buff);
 		}
 
-		ret =write_flash(start, get_page_size(), buff);
-#elif CONFIG_GPT
-		start = pt_misc.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
-		ret =write_flash(start, sizeof(struct misc_boot_ctrl), buff);
-#endif
 		if(0 != ret){
 			ERR("set misc bootloader message failed.\n");
 			return -1;
@@ -598,34 +588,24 @@ void init_abmode(void)
 		long long start = 0;
 		int read_size;
 		unsigned char * buff = (unsigned char *)(TEMP_BUF_ADDR);
-#ifdef CONFIG_GPT
-		struct gpt_ent gpt_misc;
+		union partition_entry pt_misc;
 
-		int num = find_partition(MISC_NAME);
+		int num = get_pt_index(MISC_NAME);
 		if(num >= 0) {
-			fetch_partition_info(num, &gpt_misc);
-		} else {
-			ERR("find fts partition error!\n");
-		}
-		read_size = (get_page_size() > 2048) ? get_page_size() : 2048;
-		start = gpt_misc.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
-#endif
-#ifdef CONFIG_VT
-		ver_table_entry_t vt_misc;
-
-		int num = find_partition(MISC_NAME);
-
-		if(num >= 0) {
-			fetch_partition_info(num, &vt_misc);
+			get_pt_info(num, &pt_misc);
 		} else {
 			ERR("find fts partition error!\n");
 		}
 
+		if (get_pt_type() == FLASH_PARTITION_VT) {
+			start = pt_misc.vt_entry.part1_start_blkind;
+			start *= get_block_size();
+			start += SYNA_SPACE_OFFSET_IN_MISC;
+		} else {
+			start = pt_misc.gpt_entry.gpt.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
+		}
 		read_size = (get_page_size() > 2048) ? get_page_size() : 2048;
-		start = vt_misc.part1_start_blkind;
-		start *= get_block_size();
-		start += SYNA_SPACE_OFFSET_IN_MISC;
-#endif
+
 		ret =read_flash(start, read_size, buff);
 		if(0 != ret){
 			ERR("read misc boot control data failed.\n");

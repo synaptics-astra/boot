@@ -1299,6 +1299,10 @@ int do_emmc_switch_part(unsigned int PartNum)
 		return 0; // if we have switched to this part, just return
 	}
 
+	if ((dwcmshc_params.mmc_dev_type == MMC_IS_SD || dwcmshc_params.mmc_dev_type == MMC_IS_SD_HC)
+		&& PartNum > 0)
+		return FLASH_OP_ERR;
+
 	if(power_on == 0){
 		if(mmc_set_ext_csd(CMD_ERASE_GROUP_DEF, SET_BITS, 1)){
 			ERR("EMMC: Clear out Partition Access bits error.\n");

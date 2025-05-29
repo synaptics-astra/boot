@@ -46,6 +46,8 @@
 
 #define CRC32_SIZE      (4)
 extern unsigned int crc32(unsigned int crc, unsigned char *buf, unsigned int len);
+long long vt_read_image_from_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
+long long vt_write_image_to_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
 
 /*version table*/
 #define MAX_VERSION_TABLE 32
@@ -136,7 +138,7 @@ inline static unsigned get_aligned(unsigned address, unsigned page_size) {
 }
 #endif
 
-int get_partition_info(void * tbuff)
+int vt_get_partition_info(void * tbuff)
 {
 	//clear pt is located at the last 1K of boot partition(block)
 	//encrypted pt is located at last 14K of boot partition(block)
@@ -168,7 +170,7 @@ int get_partition_info(void * tbuff)
 	return FLASH_SWITCH_PART_NOEXIST;
 }
 
-int find_partition(const void *name)
+int vt_find_partition(const void *name)
 {
 	int i = 0;
 	for(i = 0; i < vts.num; i++) {
@@ -184,7 +186,7 @@ int find_partition(const void *name)
 	return PARTITION_NOT_EXIST;
 }
 
-int fetch_partition_info(int num, ver_table_entry_t *vt)
+int vt_fetch_partition_info(int num, ver_table_entry_t *vt)
 {
 	if((num >= 0) && (num < vts.num)) {
 		memcpy(vt, &(vts.vt[num]), sizeof(ver_table_entry_t));
@@ -198,24 +200,24 @@ unsigned int get_version_table_entry_number()
 	return vts.num;
 }
 
-long long read_image(ver_table_entry_t *vt,unsigned int image_size,unsigned char *image_buff)
+long long vt_read_image(ver_table_entry_t *vt,unsigned int image_size,unsigned char *image_buff)
 {
-	return read_image_from_offset(vt, 0, image_size, image_buff);
+	return vt_read_image_from_offset(vt, 0, image_size, image_buff);
 }
 
-long long read_image_by_ptname(const char *module_name,unsigned int image_size,unsigned char *image_buff)
+long long vt_read_image_by_ptname(const char *module_name,unsigned int image_size,unsigned char *image_buff)
 {
 	ver_table_entry_t vt;
-	int ret = find_partition(module_name);
+	int ret = vt_find_partition(module_name);
 	if(ret < 0) {
 		return ret;
 	}
-	fetch_partition_info(ret, &vt);
+	vt_fetch_partition_info(ret, &vt);
 
-	return read_image_from_offset(&vt, 0, image_size, image_buff);
+	return vt_read_image_from_offset(&vt, 0, image_size, image_buff);
 }
 
-long long read_image_from_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
+long long vt_read_image_from_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
 {
 	long long start = 0, end = 0;
 
@@ -240,12 +242,12 @@ long long read_image_from_offset(ver_table_entry_t *vt, unsigned int pt_offset, 
 }
 
 
-long long write_image(ver_table_entry_t *vt, unsigned int image_size, unsigned char *image_buff)
+long long vt_write_image(ver_table_entry_t *vt, unsigned int image_size, unsigned char *image_buff)
 {
-	return write_image_to_offset(vt, 0, image_size, image_buff);
+	return vt_write_image_to_offset(vt, 0, image_size, image_buff);
 }
 
-long long write_image_to_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
+long long vt_write_image_to_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
 {
 	long long start = 0, end = 0;
 
@@ -275,10 +277,10 @@ void set_flash_ts_param(char *param_buf)
 {
 	ver_table_entry_t vt_fts;
 	unsigned int fts_dev_id = 0;
-	int num = find_partition(FTS_NAME);
+	int num = vt_find_partition(FTS_NAME);
 	*param_buf = '\0';
 	if(num >= 0) {
-		fts_dev_id = (unsigned int)fetch_partition_info(num, &vt_fts);
+		fts_dev_id = (unsigned int)vt_fetch_partition_info(num, &vt_fts);
 		sprintf(param_buf, " emmc_ts.dev_id=%d emmc_ts.size=%d emmc_ts.erasesize=%d emmc_ts.writesize=%d",
 				fts_dev_id, vt_fts.part1_blks * get_block_size(), get_block_size(), 512);
 	}
@@ -290,7 +292,7 @@ void set_flash_ts_param(char *param_buf)
 {
 	ver_table_entry_t vt_fts;
 	unsigned int fts_dev_id = 0;
-	int num = find_partition(FTS_NAME);	
+	int num = vt_find_partition(FTS_NAME);
 	*param_buf = '\0';
 	if(num >= 0) {
 		fts_dev_id = (unsigned int)fetch_partition_info(num, &vt_fts);

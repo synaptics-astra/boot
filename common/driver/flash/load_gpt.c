@@ -50,24 +50,14 @@
 #define CRC32_SIZE      (4)
 extern unsigned int crc32(unsigned int crc, unsigned char *buf, unsigned int len);
 
-struct gpt_ent_part {
-	unsigned int part;
-	struct gpt_ent gpt;
-};
-
-/*version table*/
-#define MAX_GPT_ENTRY 128
-#define MAX_ENT_NAME  36
-#define MAX_HDR_SIZE  100
-typedef struct {
-	int num;
-	struct gpt_ent_part entry[MAX_GPT_ENTRY];
-}gpt_table_t;
 static gpt_table_t gptes;
 /*version table end*/
 
 /*function declaration*/
 static void gpt_convert_efi_name_to_char(char *s, const uint16_t *ent_name, int n);
+long long gpt_read_image_from_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
+long long gpt_write_image_to_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
+
 
 static void dump_gpt_entry(struct gpt_ent_part * gpte)
 {
@@ -123,12 +113,10 @@ void uuid_to_str(char *s, size_t len, const struct uuid *u)
 		(u->node[4] << 8) | u->node[5]);
 }
 
-#ifndef SPI_BOOT_LINUX
 #ifndef GET_ALIGNED
 static unsigned get_aligned(unsigned address, unsigned page_size) {
 	return (address + page_size - 1) / page_size * page_size;
 }
-#endif
 #endif
 
 #define START_ADDR_GPT    0x0 //start from MBR
@@ -138,38 +126,6 @@ static unsigned get_aligned(unsigned address, unsigned page_size) {
 #define GPT_TABLE_OFFSET  0x400
 #define GPT_PART_SIZE     0x4000  //GTP TABLE MAXIMUM SIZE 16K
 
-#ifdef SPI_BOOT_LINUX
-#define SPI_PAGE_SIZE     512
-#define SPI_TZK_START     0x80000
-#define SPI_TZK_END       0x110000
-#define SPI_BL_START      SPI_TZK_END
-#define SPI_BL_END        0x1F0000
-
-int get_gpt(void * tbuff) {
-	struct gpt_hdr hdr;
-	struct gpt_ent entry[2];
-
-	hdr.hdr_entries = 2;
-	entry[0].ent_name[0] = 't';
-	entry[0].ent_name[1] = 'z';
-	entry[0].ent_name[2] = 'k';
-	entry[0].ent_name[3] = '\0';
-
-	entry[0].ent_lba_start = SPI_TZK_START/SPI_PAGE_SIZE;
-	entry[0].ent_lba_end = SPI_TZK_END/SPI_PAGE_SIZE;
-
-	entry[1].ent_name[0] = 'b';
-	entry[1].ent_name[1] = 'l';
-	entry[1].ent_name[2] = '\0';
-
-	entry[1].ent_lba_start = SPI_BL_START/SPI_PAGE_SIZE;
-	entry[1].ent_lba_end = SPI_BL_END/SPI_PAGE_SIZE;
-
-	parse_gpt_table(0, &hdr, entry);
-	return 0;
-}
-
-#else
 int get_gpt(void * tbuff)
 {
 	//we need a buff that is at least 64bytes aligned address because of the DMA of EMMC
@@ -245,13 +201,13 @@ gpt_load_done:
 			break;
 		}
 	}
+
 	return 0;
 
 gpt_err:
 	ERR("both primary and alt gpt are wrong!\n");
 	return FLASH_OP_ERR;
 }
-#endif
 
 static void gpt_convert_efi_name_to_char(char *s, const uint16_t *ent_name, int n)
 {
@@ -272,7 +228,7 @@ static void gpt_convert_efi_name_to_char(char *s, const uint16_t *ent_name, int 
 
 //GPT_BUFF_SIZE must larger than GPT_PRI_READ_SIZE(0x6800) as the gpt buff address will be 64byte align for DMA transfer
 
-int get_partition_info(void * tbuff)
+int gpt_get_partition_info(void * tbuff)
 {
 	int ret;
 
@@ -285,7 +241,7 @@ int get_partition_info(void * tbuff)
 }
 
 
-int find_partition(const char * name)
+int gpt_find_partition(const char * name)
 {
 	int i = 0;
 	char ent_name_char[72] = {0};
@@ -303,7 +259,7 @@ int find_partition(const char * name)
 	return PARTITION_NOT_EXIST;
 }
 
-int fetch_partition_info(int num, struct gpt_ent *gpte)
+int gpt_fetch_partition_info(int num, struct gpt_ent *gpte)
 {
 	if((num >= 0) && (num < gptes.num)) {
 		memcpy(gpte, &(gptes.entry[num].gpt), sizeof(struct gpt_ent));
@@ -317,24 +273,24 @@ unsigned int get_gpt_entry_number()
 	return gptes.num;
 }
 
-long long read_image(struct gpt_ent *gpte, unsigned int image_size, unsigned char *image_buff)
+long long gpt_read_image(struct gpt_ent *gpte, unsigned int image_size, unsigned char *image_buff)
 {
-	return read_image_from_offset(gpte, 0, image_size, image_buff);
+	return gpt_read_image_from_offset(gpte, 0, image_size, image_buff);
 }
 
-long long read_image_by_ptname(const char *module_name, unsigned int image_size, unsigned char *image_buff)
+long long gpt_read_image_by_ptname(const char *module_name, unsigned int image_size, unsigned char *image_buff)
 {
 	struct gpt_ent gpte;
-	int pt_index = find_partition(module_name);
+	int pt_index = gpt_find_partition(module_name);
 	if(pt_index < 0) {
 		return -1;
 	}
-	fetch_partition_info(pt_index, &gpte);
+	gpt_fetch_partition_info(pt_index, &gpte);
 
-	return read_image(&gpte, image_size, image_buff);
+	return gpt_read_image(&gpte, image_size, image_buff);
 }
 
-long long read_image_from_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
+long long gpt_read_image_from_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
 {
 	long long start = 0, end = 0;
 
@@ -351,12 +307,12 @@ long long read_image_from_offset(struct gpt_ent *gpte, unsigned int pt_offset, u
 	return read_flash(start, size, image_buf);
 }
 
-long long write_image(struct gpt_ent *gpte, unsigned int image_size, unsigned char *image_buff)
+long long gpt_write_image(struct gpt_ent *gpte, unsigned int image_size, unsigned char *image_buff)
 {
-	return write_image_to_offset(gpte, 0, image_size, image_buff);
+	return gpt_write_image_to_offset(gpte, 0, image_size, image_buff);
 }
 
-long long write_image_to_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
+long long gpt_write_image_to_offset(struct gpt_ent *gpte, unsigned int pt_offset, unsigned int size, unsigned char *image_buf)
 {
 	long long start = 0, end = 0;
 

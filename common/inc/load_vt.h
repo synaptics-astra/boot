@@ -101,15 +101,11 @@
 
 void dump_version_table(void);
 int parse_version_table(unsigned char* buff);
-int get_partition_info(void * tbuff);
-int find_partition(const void *name);
-int fetch_partition_info(int num, ver_table_entry_t *vt);
+int vt_get_partition_info(void * tbuff);
+int vt_find_partition(const void * name);
+int vt_fetch_partition_info(int num, ver_table_entry_t * vt);
 unsigned int get_version_table_entry_number();
-long long read_image(ver_table_entry_t *vt,unsigned int image_size,unsigned char *image_buff);
-long long read_image_from_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
-void set_flash_ts_param(char *param_buf);
-long long read_image_by_ptname(const char *module_name,unsigned int image_size,unsigned char *image_buff);
-long long write_image(ver_table_entry_t *vt, unsigned int image_size, unsigned char *image_buff);
-long long write_image_to_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
-
+long long vt_read_image(ver_table_entry_t * vt, unsigned int image_size, unsigned char * image_buff);
+long long vt_read_image_by_ptname(const char *module_name,unsigned int image_size,unsigned char *image_buff);
+long long vt_write_image(ver_table_entry_t * vt, unsigned int image_size, unsigned char * image_buff);
 #endif
