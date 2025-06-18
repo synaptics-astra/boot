@@ -1,0 +1,1 @@
+../dolphin-default/platform.mk
