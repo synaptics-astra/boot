@@ -470,7 +470,8 @@ static void sm_adc_init(void)
 	reg.u32 = MV_SM_READ_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_CTRL);
 	reg.uSM_CTRL_ADC_EN = 1;
 	reg.uSM_CTRL_ADC_RESET = 1;
-
+	reg.uSM_CTRL_ADC_SELBG = 1;
+	reg.uSM_CTRL_ADC_SEL_VREF = 1;
 	MV_SM_WRITE_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_CTRL, reg.u32);
 
 
