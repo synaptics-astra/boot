@@ -41,34 +41,38 @@
 //FIXME: u-boot use this format to set UTF16 charactors currently
 #ifndef CONFIG_AB_BOOTFLOW
 
-#define FTS_NAME		"fts"
-#define KERNEL_NAME		"boot"
-#define RECOVERY_NAME		"recovery"
-#define LOGO_NAME		"fastlogo"
-#define TZK_NORMAL_NAME		"tzk_normal"
-#define TZK_NORMALB_NAME	"tzk_normalB"
-#define TZK_RECOVERY_NAME	"tzk_recovery"
-#define POST_BL_NAME		"post_bl"
-#define BL_NORMAL_NAME		"bl_normal"
-#define BL_NORMALB_NAME		"bl_normalB"
-#define BL_RECOVERY_NAME	"bl_recovery"
-#define MISC_NAME		"misc"
-#define FASTBOOT_NAME		"fastboot"
-#define FASTBOOTA_NAME		"fastboot_1st"
-#define FASTBOOTB_NAME		"fastboot_2nd"
-#define FRP_NAME		"frp"
-#define KEY1_NAME		"key_1st"
-#define KEY2_NAME		"key_2nd"
-#define DTBO_NAME		"dtbo"
-
+#define FTS_NAME                "fts"
+#define DEVINFO_NAME            "devinfo"
+#define KERNEL_NAME             "boot"
+#define RECOVERY_NAME           "recovery"
+#define LOGO_NAME               "fastlogo"
+#define TZK_NORMAL_NAME         "tzk_normal"
+#define TZK_NORMALB_NAME        "tzk_normalB"
+#define TZK_RECOVERY_NAME       "tzk_recovery"
+#define POST_BL_NAME            "post_bl"
+#define BL_NORMAL_NAME          "bl_normal"
+#define BL_NORMALB_NAME         "bl_normalB"
+#define BL_RECOVERY_NAME        "bl_recovery"
+#define MISC_NAME               "misc"
+#define FASTBOOT_NAME           "fastboot"
+#define FASTBOOTA_NAME          "fastboot_1st"
+#define FASTBOOTB_NAME          "fastboot_2nd"
+#define FRP_NAME                "frp"
+#define KEY1_NAME               "key_1st"
+#define KEY2_NAME               "key_2nd"
+#define DTBO_NAME               "dtbo"
+#define FIRMWARE_NAME           "firmware"
+#define VENDOR_BOOT_NAME        "vendor_boot"
+#define INIT_BOOT_NAME          "init_boot"
+#define VENDOR_KERNEL_BOOT_NAME "vendor_kernel_boot"
 #else
 
 //add below definitions just for common drivers
 #define BL_NORMAL_NAME          "bl_normal"
 #define KERNEL_NAME             "boot"
 #define RECOVERY_NAME           "recovery"
-
 #define FTS_NAME                "fts"
+#define DEVINFO_NAME            "devinfo"
 #define MISC_NAME               "misc"
 #define FRP_NAME                "frp"
 #define KERNEL_A_NAME           "boot_a"
@@ -85,18 +89,24 @@
 #define KEY_B_NAME              "key_b"
 #define DTBO_A_NAME             "dtbo_a"
 #define DTBO_B_NAME             "dtbo_b"
-
+#define FIRMWARE_A_NAME         "firmware_a"
+#define FIRMWARE_B_NAME         "firmware_b"
+#define VENDOR_BOOT_A_NAME      "vendor_boot_a"
+#define VENDOR_BOOT_B_NAME      "vendor_boot_b"
+#define VENDOR_KERNEL_BOOT_A_NAME "vendor_kernel_boot_a"
+#define VENDOR_KERNEL_BOOT_B_NAME "vendor_kernel_boot_b"
+#define INIT_BOOT_A_NAME        "init_boot_a"
+#define INIT_BOOT_B_NAME        "init_boot_b"
 #endif
 
 void dump_version_table(void);
 int parse_version_table(unsigned char* buff);
-int get_partition_info(void * tbuff);
-int find_partition(const void *name);
-int fetch_partition_info(int num, ver_table_entry_t *vt);
+int vt_get_partition_info(void * tbuff);
+int vt_find_partition(const void * name);
+int vt_fetch_partition_info(int num, ver_table_entry_t * vt);
 unsigned int get_version_table_entry_number();
-long long read_image(ver_table_entry_t *vt,unsigned int image_size,unsigned char *image_buff);
-long long read_image_from_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
-void set_flash_ts_param(char *param_buf);
-long long read_image_by_ptname(const char *module_name,unsigned int image_size,unsigned char *image_buff);
-
+long long vt_read_image(ver_table_entry_t * vt, unsigned int image_size, unsigned char * image_buff);
+long long vt_read_image_from_offset(ver_table_entry_t *vt, unsigned int pt_offset, unsigned int size, unsigned char *image_buf);
+long long vt_read_image_by_ptname(const char *module_name,unsigned int image_size,unsigned char *image_buff);
+long long vt_write_image(ver_table_entry_t * vt, unsigned int image_size, unsigned char * image_buff);
 #endif

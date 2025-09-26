@@ -31,6 +31,10 @@
  * DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS' TOTAL CUMULATIVE LIABILITY
  * TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS.
  */
+
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "sm_type.h"
 #include "sm_io.h"
 #include "SysMgr.h"
@@ -54,6 +58,7 @@ int soc_assert(void)
 	reg_ctrl.u32=MV_SM_READ_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_CTRL);
 	reg_ctrl.uSM_CTRL_ISO_EN = 1;
 	MV_SM_WRITE_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_CTRL, reg_ctrl.u32);
+	vTaskDelay(10);
 
 	// assert SoC reset
 	reg.u32=MV_SM_READ_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_RST_CTRL);
@@ -73,6 +78,7 @@ int soc_deassert(void)
 	reg.u32=MV_SM_READ_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_RST_CTRL);
 	reg.uSM_RST_CTRL_SOC_RST_GO = 1;
 	MV_SM_WRITE_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_RST_CTRL, reg.u32);
+	vTaskDelay(10);
 
 	//enable ISO_EN before power off soc
 	reg_ctrl.u32=MV_SM_READ_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_CTRL);

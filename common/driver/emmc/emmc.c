@@ -62,7 +62,7 @@ static int init_emmc(int dev)
 // part 0(user area), 1(b1), 2(b2)
 static loff_t switch_emmc_part(unsigned int part)
 {
-	if(part > 2)
+	if(part > 8)
 		return FLASH_SWITCH_PART_NOEXIST;
 
 	if(current_part != part)
@@ -71,7 +71,7 @@ static loff_t switch_emmc_part(unsigned int part)
 		return 0; // if we have switched to this part, just return
 
 	if(do_emmc_switch_part(part)){
-		ERR("EMMC: switch to boot partion %d error.\n", part);
+		INFO("EMMC: can't switch to partion %d.\n", part);
 		return FLASH_OP_ERR;
 	}
 	return 0;
@@ -125,7 +125,7 @@ static long long adaptor_get_capacity(int dev)
 	}
 }
 
-struct flash_adaptor g_flash= {
+struct flash_adaptor mmc_g_flash= {
 	.block_size = 0x80000,
 	.page_size = 8192,
 	.addr_cycle = 0,
@@ -142,7 +142,7 @@ struct flash_adaptor g_flash= {
 
 static void emmc_set_parameters(int blocksize, int pagesize, int addrcycle)
 {
-	g_flash.block_size = blocksize;
-	g_flash.page_size = pagesize;
-	g_flash.addr_cycle = addrcycle;
+	mmc_g_flash.block_size = blocksize;
+	mmc_g_flash.page_size = pagesize;
+	mmc_g_flash.addr_cycle = addrcycle;
 }

@@ -48,22 +48,23 @@
 #endif
 
 #include "boot_devinfo.h"
+#include "flash_partition.h"
 
 boot_info_t boot_info;
 
 void read_boot_info_from_flash(void)
 {
-	struct gpt_ent gpt_devinfo;
+	union partition_entry gpt_devinfo;
 	unsigned char * buff = (unsigned char *)(TEMP_BUF_ADDR);
 
-	int num = find_partition(DEVINFO_NAME);
+	int num = get_pt_index(DEVINFO_NAME);
 	if(num >= 0) {
-		fetch_partition_info(num, &gpt_devinfo);
+		get_pt_info(num, &gpt_devinfo);
 	} else {
 		ERR("find fts partition error!\n");
 	}
 
-	if(read_image(&gpt_devinfo, sizeof(boot_info_t), buff)){
+	if(read_pt(&gpt_devinfo, sizeof(boot_info_t), buff)){
 		ERR("set fts boot message failed.\n");
 	}
 	else
@@ -76,18 +77,18 @@ void read_boot_info_from_flash(void)
 
 void write_boot_info_to_flash(boot_info_t * pBoot_info)
 {
-	struct gpt_ent gpt_devinfo;
+	union partition_entry gpt_devinfo;
 	unsigned char * buff = (unsigned char *)(TEMP_BUF_ADDR);
 
-	int num = find_partition(DEVINFO_NAME);
+	int num = get_pt_index(DEVINFO_NAME);
 	if(num >= 0) {
-		fetch_partition_info(num, &gpt_devinfo);
+		get_pt_info(num, &gpt_devinfo);
 	} else {
 		ERR("find devinfo partition error!\n");
 	}
 
 	memcpy(buff, (unsigned char *)pBoot_info, sizeof(boot_info_t));
-	if(write_image(&gpt_devinfo, sizeof(boot_info_t), buff)){
+	if(write_pt(&gpt_devinfo, sizeof(boot_info_t), buff)){
 		ERR("write boot info to flash failed.\n");
 	}
 }

@@ -769,7 +769,7 @@ static int __attribute__((used)) mv_sm_process_power_msg(void * data, INT32 len)
 			}
 		case MV_SM_GET_SUSPEND_RESUME_TIME:
 			{
-				PRT_INFO("%%%%%%%%SM:Get time from Linux%%%%%%%%\n");
+				PRT_DEBUG("%%%%%%%%SM:Get time from Linux%%%%%%%%\n");
 				sm_apb_timer_getlongtimems(&time_get);
 				msg_send[0] = time_get.low;
 				msg_send[1] = time_get.high;

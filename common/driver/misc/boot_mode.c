@@ -43,8 +43,12 @@
 #include "debug.h"
 #include "flash_adaptor.h"
 
-#ifdef EMMC_BOOT
+#ifdef CONFIG_GPT
 #include "load_gpt.h"
+#endif
+
+#ifdef CONFIG_VT
+#include "load_vt.h"
 #endif
 
 #include "flash_ts.h"
@@ -53,6 +57,7 @@
 
 #include "system_manager.h"
 #include "mem_map_itcm.h"
+#include "flash_partition.h"
 
 #define BOOTLOADER_COMMAND_KEY         "bootloader.command"
 #define BOOTLOADER_OPT_QUIESCENT_KEY   "bootloader.opt.quiescent"
@@ -80,16 +85,17 @@ static int Bootmode = BOOTMODE_NORMAL;
 static int BootOptions = 0;
 static bool fts_exist = FALSE;       //fts partition exist
 static bool devinfo_exist = FALSE;   //devinfo partition exist
+static bool misc_exist = FALSE;   //misc partition exist
 
 int init_fts(void)
 {
 #ifdef EMMC_BOOT
-	struct gpt_ent gpt_fts;
-	int num = find_partition(FTS_NAME);
+	union partition_entry pt_fts;
+	int num = get_pt_index(FTS_NAME);
 	if(num >= 0) {
-		fetch_partition_info(num, &gpt_fts);
-		INFO("FTS GPT INFO: ent_lba_start=0x%x, ent_lba_end=0x%x \n", gpt_fts.ent_lba_start, gpt_fts.ent_lba_end);
-		return flash_ts_init((gpt_fts.ent_lba_start)/1024, (gpt_fts.ent_lba_end - gpt_fts.ent_lba_start + 1)/1024);
+		get_pt_info(num, &pt_fts);
+		INFO("FTS GPT INFO: ent_lba_start=0x%x, ent_lba_end=0x%x \n", pt_fts.gpt_entry.gpt.ent_lba_start, pt_fts.gpt_entry.gpt.ent_lba_end);
+		return flash_ts_init((pt_fts.gpt_entry.gpt.ent_lba_start)/1024, (pt_fts.gpt_entry.gpt.ent_lba_end - pt_fts.gpt_entry.gpt.ent_lba_start + 1)/1024);
 	}
 #endif
 	ERR("FTS Partition NOT Found !!\n");
@@ -102,21 +108,20 @@ static int check_misc_command()
 	struct bootloader_message *msg = (struct bootloader_message *)buff;
 	unsigned int read_size = 0;
 	long long ret;
+	union partition_entry pt_misc;
 
-	//get misc partition informaiton from EMMC by GPT
-	struct gpt_ent gpt_misc;
-	int num = find_partition(MISC_NAME);
+	int num = get_pt_index(MISC_NAME);
 	if(num >= 0) {
-		fetch_partition_info(num, &gpt_misc);
+		get_pt_info(num, &pt_misc);
 	} else {
 		// if no misc,  return normal
 		ERR("find misc partition error!\n");
 		return BOOTMODE_NORMAL;
 	}
 
-	//read 8k bytes header to get the size of image stored in the header
+	//read one page to get the size of image stored in the header
 	read_size = (get_page_size() > 2048) ? get_page_size() : 2048;
-	ret = read_image(&gpt_misc, read_size, buff);
+	ret = read_pt(&pt_misc, read_size, buff);
 	if(ret){
 		ERR("read misc area data failed.\n");
 		return BOOTMODE_NORMAL;
@@ -143,11 +148,11 @@ static void set_misc_command(const char *command)
 	struct bootloader_message *msg = (struct bootloader_message *)buff;
 	unsigned int read_size = 0;
 	long long ret;
+	union partition_entry pt_misc;
 
-	struct gpt_ent gpt_misc;
-	int num = find_partition(MISC_NAME);
+	int num = get_pt_index(MISC_NAME);
 	if(num >= 0) {
-		fetch_partition_info(num, &gpt_misc);
+		get_pt_info(num, &pt_misc);
 	} else {
 		ERR("find misc partition error!\n");
 		return;
@@ -155,7 +160,7 @@ static void set_misc_command(const char *command)
 
 	//read 8k bytes header to get the size of image stored in the header
 	read_size = (get_page_size() > 2048) ? get_page_size() : 2048;
-	ret = read_image(&gpt_misc, read_size, buff);
+	ret = read_pt(&pt_misc, read_size, buff);
 	if(ret){
 		ERR("read misc area data failed.\n");
 		return;
@@ -165,14 +170,14 @@ static void set_misc_command(const char *command)
 	{
 		memset(msg->command, 0x0, sizeof(msg->command));
 		strcpy(msg->command, command);
-		write_image(&gpt_misc, read_size, buff);
+		write_pt(&pt_misc, read_size, buff);
 		if(0 != ret){
 			ERR("set misc bootloader message failed.\n");
 		}
 	} else if (!strcmp(command, kBootcmdQuiescent) &&
 			!strncmp(msg->command, kBootcmdQuiescent, sizeof(kBootcmdQuiescent))) {
 			memset(msg->command, 0x0, sizeof(msg->command));
-			write_image(&gpt_misc, read_size, buff);
+			write_pt(&pt_misc, read_size, buff);
 			if(0 != ret){
 				ERR("set misc bootloader message failed\n");
 			}
@@ -361,28 +366,32 @@ int init_bootmode(void)
 {
 	int num = 0;
 
-	num = find_partition(FTS_NAME);
+	num = get_pt_index(FTS_NAME);
 	if(num > 0)
 	{
-		struct gpt_ent gpt_fts;
+		union partition_entry pt_fts;
 		fts_exist = TRUE;
 
-		fetch_partition_info(num, &gpt_fts);
+		get_pt_info(num, &pt_fts);
 
-		if(gpt_fts.ent_lba_end  < gpt_fts.ent_lba_start) {
+		if(pt_fts.gpt_entry.gpt.ent_lba_end  < pt_fts.gpt_entry.gpt.ent_lba_start) {
 			ERR("entry_lba_start is larger than entry_lba_end! \n");
 			return FLASH_OP_ERR;
 		}
 
-		flash_ts_init((gpt_fts.ent_lba_start)/1024, (gpt_fts.ent_lba_end - gpt_fts.ent_lba_start + 1)/1024);
+		flash_ts_init((pt_fts.gpt_entry.gpt.ent_lba_start)/1024, (pt_fts.gpt_entry.gpt.ent_lba_end - pt_fts.gpt_entry.gpt.ent_lba_start + 1)/1024);
 	}
 
-	num = find_partition(DEVINFO_NAME);
+	num = get_pt_index(DEVINFO_NAME);
 	if(num > 0)
 	{
 		devinfo_exist = TRUE;
 		read_boot_info_from_flash();
 	}
+
+	num = get_pt_index(MISC_NAME);
+	if(num > 0)
+		misc_exist = TRUE;
 
 	return 0;
 }
@@ -490,15 +499,19 @@ int check_fastlogo_start()
 
 static int BootAB_sel = BOOTSEL_A;
 static boot_ctrl_t bctrl = {0};
-static misc_boot_ctrl_t misc_bctrl = {0};
+static struct misc_boot_ctrl misc_bctrl __attribute__((aligned(4)))= {0};
 
-static bool is_valid_bootctrl(void)
+static bool bootctrl_is_exist(void) {
+	return devinfo_exist || misc_exist;
+}
+
+static bool bootctrl_is_valid(void)
 {
 	if (fts_exist) {
 		return ((BOOTCTRL_MAGIC == bctrl.magic) &&
 			(BOOT_CONTROL_VERSION == bctrl.version));
 	}
-	else if (devinfo_exist) {
+	else if (bootctrl_is_exist()) {
 		return ((BOOTCTRL_MAGIC == misc_bctrl.magic) &&
 			(MISC_BOOT_CONTROL_VERSION == misc_bctrl.version));
 	}
@@ -517,7 +530,7 @@ static bool slot_is_bootable(int slot_num)
 			return (pABSlot->priority > 1 &&
 				(pABSlot->successful_boot || (pABSlot->tries_remaining > 0)));
 	}
-	else if (devinfo_exist) {
+	else if (bootctrl_is_exist()) {
 		misc_slot_metadata_t *pABSlot = &misc_bctrl.slot_info[slot_num];
 		return (pABSlot->priority > 1 && pABSlot->verity_corrupted == 0 &&
 			(pABSlot->successful_boot || (pABSlot->tries_remaining > 0)));
@@ -537,7 +550,7 @@ static int bootab_slot_select(void)
 			bootab_sel = BOOTSEL_B;
 		}
 	}
-	else if (devinfo_exist) {
+	else if (bootctrl_is_exist()) {
 		if(misc_bctrl.slot_info[0].priority >= misc_bctrl.slot_info[1].priority) {
 			bootab_sel = BOOTSEL_A;
 		}
@@ -567,25 +580,36 @@ static int write_bootctrl_metadata(void * pbootctrl)
 			return -1;
 		}
 	}
-	else if (devinfo_exist) {
-		struct gpt_ent gpt_misc;
+	else if (bootctrl_is_exist()) {
+		union partition_entry pt_misc;
 		long long ret;
 		long long start = 0;
-		int num = find_partition(MISC_NAME);
+		int num = get_pt_index(MISC_NAME);
 		unsigned char * buff = (unsigned char *)(TEMP_BUF_ADDR);
 
 		if(num >= 0) {
-			fetch_partition_info(num, &gpt_misc);
+			get_pt_info(num, &pt_misc);
 		} else {
 			ERR("find misc partition error!\n");
 		}
 
+		memcpy(buff, (unsigned char *)pbootctrl, sizeof(struct misc_boot_ctrl));
+
 		/* bootctrl_metadata in misc partition position */
-		start = gpt_misc.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
+		if (get_pt_type() == FLASH_PARTITION_VT) {
+			start = pt_misc.vt_entry.part1_start_blkind * get_block_size() + SYNA_SPACE_OFFSET_IN_MISC;
+			ret = erase_flash((start & (~(get_block_size() - 1))), get_block_size());
+			if(0 != ret){
+				ERR("erase misc bootloader message failed.\n");
+				return -1;
+			}
 
-		memcpy(buff, (unsigned char *)pbootctrl, sizeof(misc_boot_ctrl_t));
+			ret =write_flash(start, get_page_size(), buff);
+		} else {
+			start = pt_misc.gpt_entry.gpt.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
+			ret =write_flash(start, sizeof(struct misc_boot_ctrl), buff);
+		}
 
-		ret =write_flash(start, sizeof(misc_boot_ctrl_t), buff);
 		if(0 != ret){
 			ERR("set misc bootloader message failed.\n");
 			return -1;
@@ -620,7 +644,7 @@ static void init_bootctrl(int default_slot)
 
 		write_bootctrl_metadata((void*)pbootctrl);
 	}
-	else if (devinfo_exist) {
+	else if (bootctrl_is_exist()) {
 		misc_boot_ctrl_t * pbootctrl = &misc_bctrl;
 
 		memset((void *)pbootctrl, 0, sizeof(misc_boot_ctrl_t));
@@ -674,11 +698,17 @@ static int check_dmverity_device_corrupted(int bootab_sel)
 	return bootab_sel_final;
 }
 
+extern int GenX_BCM_Get_Boot_Slot(void);
+__attribute__((weak)) int GenX_BCM_Get_Boot_Slot(void)
+{
+	return BOOTSEL_DEFAULT;
+}
+
 static int check_android_abcommand(void)
 {
 	unsigned int bootab_sel = BOOTSEL_DEFAULT;
 
-	if(is_valid_bootctrl()) {
+	if(bootctrl_is_valid()) {
 		if(slot_is_bootable(0) && slot_is_bootable(1)) {
 			bootab_sel = bootab_slot_select();
 		}
@@ -695,11 +725,13 @@ static int check_android_abcommand(void)
 			goto out;
 		}
 	}
-	else {
+	else if (bootctrl_is_exist()) {
 		ERR("No valid metadata for bootctrl, initialize to default slot %d !\n", BOOTSEL_DEFAULT);
 		init_bootctrl(BOOTSEL_DEFAULT);
 		bootab_sel = BOOTSEL_DEFAULT;
 	}
+	else
+		bootab_sel = GenX_BCM_Get_Boot_Slot();
 
 	bootab_sel = check_dmverity_device_corrupted(bootab_sel);
 
@@ -733,26 +765,34 @@ void init_abmode(void)
 			memcpy((void *)&bctrl, (void *)pbootctrl, sizeof(boot_ctrl_t));
 		}
 	}
-	else if(devinfo_exist) {
+	else if(bootctrl_is_exist()) {
 		long long ret;
 		long long start = 0;
 		int read_size;
 		unsigned char * buff = (unsigned char *)(TEMP_BUF_ADDR);
-		struct gpt_ent gpt_misc;
+		union partition_entry pt_misc;
 
-		int num = find_partition(MISC_NAME);
+		int num = get_pt_index(MISC_NAME);
 		if(num >= 0) {
-			fetch_partition_info(num, &gpt_misc);
+			get_pt_info(num, &pt_misc);
 		} else {
 			ERR("find fts partition error!\n");
 		}
+
+		if (get_pt_type() == FLASH_PARTITION_VT) {
+			start = pt_misc.vt_entry.part1_start_blkind;
+			start *= get_block_size();
+			start += SYNA_SPACE_OFFSET_IN_MISC;
+		} else {
+			start = pt_misc.gpt_entry.gpt.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
+		}
 		read_size = (get_page_size() > 2048) ? get_page_size() : 2048;
-		start = gpt_misc.ent_lba_start * 512 + SYNA_SPACE_OFFSET_IN_MISC;
+
 		ret =read_flash(start, read_size, buff);
 		if(0 != ret){
 			ERR("read misc boot control data failed.\n");
 		}
-		memcpy((unsigned char *)&misc_bctrl, buff, sizeof(misc_boot_ctrl_t));
+		memcpy((unsigned char *)&misc_bctrl, buff, sizeof(struct misc_boot_ctrl));
 	}
 }
 
@@ -771,12 +811,12 @@ int try_abmode(int abmode_sel)
 {
 	/* ... and decrement tries remaining, if applicable. */
 	if(fts_exist) {
-		if(is_valid_bootctrl() && (bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
+		if(bootctrl_is_valid() && (bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
 			bctrl.slot_info[abmode_sel].tries_remaining -= 1;
 			write_bootctrl_metadata((void*)&bctrl);
 			return 0;
 		}
-		else if(is_valid_bootctrl()) {
+		else if(bootctrl_is_valid()) {
 			bctrl.slot_info[abmode_sel].priority-=2;
 			write_bootctrl_metadata((void*)&bctrl);
 			return -1;
@@ -786,13 +826,13 @@ int try_abmode(int abmode_sel)
 			return 1;
 		}
 	}
-	else if(devinfo_exist) {
-		if(is_valid_bootctrl() && (misc_bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
+	else if(bootctrl_is_exist()) {
+		if(bootctrl_is_valid() && (misc_bctrl.slot_info[abmode_sel].tries_remaining > 0)) {
 			misc_bctrl.slot_info[abmode_sel].tries_remaining -= 1;
 			write_bootctrl_metadata((void*)&misc_bctrl);
 			return 0;
 		}
-		else if(is_valid_bootctrl()) {
+		else if(bootctrl_is_valid()) {
 			misc_bctrl.slot_info[abmode_sel].priority-=2;
 			write_bootctrl_metadata((void*)&misc_bctrl);
 			return -1;

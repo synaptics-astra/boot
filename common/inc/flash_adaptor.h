@@ -38,6 +38,13 @@
 
 #define FLASH_SWITCH_PART_NOEXIST	(-1)
 #define FLASH_OP_ERR	 	(-2)
+
+enum flash_dev_type {
+	FLASH_DEV_EMMC = 0,
+	FLASH_DEV_SD,
+	FLASH_DEV_SPI,
+};
+
 struct flash_adaptor {
 	size_t boot_part_size;
 	size_t block_size;
@@ -54,7 +61,7 @@ struct flash_adaptor {
 	void (*set_parameters)(int blocksize, int pagesize, int addrcycle);
 	void (*stop_alt_boot_mode)(void);
 
-
+	long long (*erase)(long long start, unsigned int size);
 	long long (*read)(long long start, unsigned int size, unsigned char *buff);
 	long long (*write)(long long start, unsigned int size, unsigned char *buff);
 };
@@ -70,6 +77,7 @@ unsigned int flash_dev_id_inc(unsigned int dev_id);
 long long read_flash(long long start, unsigned int size, unsigned char *buff);
 long long read_flash_from_part(unsigned int part, long long start, unsigned int size, unsigned char *buff);
 long long get_flash_capacity(void);
+long long erase_flash(long long start, unsigned int size);
 long long write_flash(long long start, unsigned int size, unsigned char *buff);
 void stop_alt_boot_mode(void);
 #endif

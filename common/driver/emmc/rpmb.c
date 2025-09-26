@@ -250,7 +250,7 @@ int rpmb_write_blocks(int blk_index, int blk_num, void *buff, size_t buff_len)
 	flush_dcache_range((void*)(uintptr_t)frame_req, (void*)((uintptr_t)frame_req + sizeof(rpmbFrame)));
 
 	invalidate_dcache_range((void*)(uintptr_t)frame_req, (void*)((uintptr_t)frame_req + sizeof(rpmbFrame)));
-	rpmb_response((uintptr_t)frame_req, sizeof(rpmbFrame));
+	ret = rpmb_response((uintptr_t)frame_req, sizeof(rpmbFrame));
 	if (0 != ret) {
 		ERR("RPMB: rpmb failed to response write block!!!\n");
 		goto out1;

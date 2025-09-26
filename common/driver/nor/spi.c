@@ -38,7 +38,12 @@
 
 #include "flash_adaptor.h"
 
+#define SPI_BOOT_PART_NUM 2
+#define SPI_BOOT_PART_SIZE 0x200000
+
 extern void SPIReadFlash(unsigned int, unsigned int, unsigned int);
+extern int spi_write(unsigned int memory, unsigned int offset, int size);
+extern int spi_erase(unsigned int offset, int size);
 
 static int nor_init(int dev)
 {
@@ -47,15 +52,26 @@ static int nor_init(int dev)
 
 static loff_t nor_switch_part(unsigned int part)
 {
-	if(part > 1)
+	if(part > SPI_BOOT_PART_NUM)
 		return FLASH_SWITCH_PART_NOEXIST;
 
 	//if part = 0, return 0
+	return (part -1) * SPI_BOOT_PART_SIZE;
+}
+
+static long long nor_erase(long long start, unsigned int size)
+{
+	spi_erase(start, size);
 	return 0;
 }
 
 static long long nor_read(long long start, unsigned int size, unsigned char *buff)
 {
+	if (start > 0x1000000) {
+		ERR("spi offset is too big: %x\n", start);
+		return -1;
+	}
+
 	//we read spi 4bytes by 4bytes
 	int mod = size % 4;
 	size = size/4;
@@ -66,14 +82,22 @@ static long long nor_read(long long start, unsigned int size, unsigned char *buf
 	return 0;
 }
 
+static long long nor_write(long long start, unsigned int size, unsigned char *buff)
+{
+	spi_write((uintptr_t)buff, start, size);
+	return 0;
+}
+
+
 static int nor_get_boot_partition_number(void)
 {
-	return 1;
+	return SPI_BOOT_PART_NUM;
 }
 
 static void nor_set_parameters(int blocksize, int pagesize, int addrcycle);
 
-struct flash_adaptor g_flash = {
+struct flash_adaptor spi_g_flash = {
+	.boot_part_size = 0x80000,
 	.block_size = 0x10000,
 	.page_size = 512,
 	.addr_cycle = 0,
@@ -81,13 +105,15 @@ struct flash_adaptor g_flash = {
 	.get_boot_partition_number = nor_get_boot_partition_number,
 	.switch_part = nor_switch_part,
 	.set_parameters = nor_set_parameters,
+	.erase = nor_erase,
 	.read = nor_read,
+	.write = nor_write,
 };
 
 static void nor_set_parameters(int blocksize, int pagesize, int addrcycle)
 {
-	g_flash.block_size = 0x10000;
-	g_flash.page_size = 512;
-	g_flash.addr_cycle = 0;
+	spi_g_flash.block_size = 0x10000;
+	spi_g_flash.page_size = 512;
+	spi_g_flash.addr_cycle = 0;
 }
 

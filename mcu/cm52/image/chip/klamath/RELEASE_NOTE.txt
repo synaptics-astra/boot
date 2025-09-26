@@ -1,0 +1,27 @@
+SL2610_SM_RC1.1 (FPGA build)
+===========================
+RC1.1 release as a prebuilt package to boot REE and TEE images from eMMC/XSPI device
+ - Validated A-core boot with RC3.3 bitfile package
+ - Bootflow verified: SynaPROT -> SPK -> SM BL -> SM FW -> BL & TZK images
+ - DRAM addresses used for scratch buffer: 0xBA000000 and 0xBA100000 for sec lib decryption
+- CM52 BL:
+	- Supported DDR4 memory initialization in APBL using DHL lib with DDR4 params
+	- APBL Entry @ 0x30028000
+	- Integrated latest SEC lib Version 0xA0000104
+CM52 SM
+	- Config PPC to set UART0 as NS
+	- Loads UBOOT and TZK images from eMMC/XSPI
+	- Release ACPU from reset
+LOG: INFO:: Build Date 03-09-2025 Time 14:59:19 Commit 19c47a1
+
+SL2610_SM_RC1.0
+===============
+Initial SM RC1.0 release as a prebuilt package to boot REE and TEE images from eMMC device
+ - Based on boot source, it reads the image from eMMC or XSPI device and boots to the next stage
+ - Validated A-core boot with RC3.3 bitfile package
+ - Bootflow verified: SynaPROT -> SPK -> APBL -> SM FW -> REE & TEE images
+ - Supported DDR4 memory initialization in APBL
+ - APBL uses DRAM scratch buffer for SM binary loading at 0xB4800000 & 0xB4A00000
+ - DRAM addresses used for scratch buffer: 0xBA000000 and 0xBA100000 for sec lib decryption
+ - Integrated latest SEC lib Version 0xA0000103
+ - verified bootflow with APBL and SM FW on Commit ID 3404376f

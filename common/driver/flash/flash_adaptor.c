@@ -37,38 +37,41 @@
 
 #include "flash_adaptor.h"
 
-extern struct flash_adaptor g_flash;
+extern struct flash_adaptor spi_g_flash;
+extern struct flash_adaptor mmc_g_flash;
+
 static int global_flash_id = 0;
+static struct flash_adaptor *g_flash;
 
 void set_flash_parameters(int blocksize, int pagesize, int addrcycle)
 {
-	if(g_flash.set_parameters)
-		return g_flash.set_parameters(blocksize, pagesize, addrcycle);
+	if(g_flash->set_parameters)
+		return g_flash->set_parameters(blocksize, pagesize, addrcycle);
 }
 
 size_t get_block_size()
 {
-	return g_flash.block_size;
+	return g_flash->block_size;
 }
 size_t get_boot_part_size()
 {
-	return g_flash.boot_part_size;
+	return g_flash->boot_part_size;
 }
 
 size_t get_page_size()
 {
-	return g_flash.page_size;
+	return g_flash->page_size;
 }
 
 int get_addr_cycle()
 {
-	return g_flash.addr_cycle;
+	return g_flash->addr_cycle;
 }
 
 int get_boot_partition_number(void)
 {
-	if(g_flash.get_boot_partition_number)
-		return g_flash.get_boot_partition_number();
+	if(g_flash->get_boot_partition_number)
+		return g_flash->get_boot_partition_number();
 	else
 		return FLASH_OP_ERR;
 }
@@ -77,8 +80,16 @@ int init_flash(int dev)
 {
 	global_flash_id = dev;
 
-	if(g_flash.init)
-		return g_flash.init(dev);
+	if (dev == FLASH_DEV_EMMC || dev == FLASH_DEV_SD)
+		g_flash = &mmc_g_flash;
+
+#ifdef SPI_BOOT_LINUX
+	if (dev == FLASH_DEV_SPI)
+		g_flash = &spi_g_flash;
+#endif
+
+	if(g_flash && g_flash->init)
+		return g_flash->init(dev);
 	else
 		return FLASH_OP_ERR;
 }
@@ -87,22 +98,22 @@ int init_flash(int dev)
 //this function is only for reading bootloader.subimg
 int switch_flash_part(unsigned int part)
 {
-	if(g_flash.switch_part)
-		return g_flash.switch_part(part);
+	if(g_flash->switch_part)
+		return g_flash->switch_part(part);
 	else
 		return FLASH_OP_ERR;
 }
 
 void stop_alt_boot_mode(void)
 {
-	if(g_flash.stop_alt_boot_mode)
-		g_flash.stop_alt_boot_mode();
+	if(g_flash->stop_alt_boot_mode)
+		g_flash->stop_alt_boot_mode();
 }
 
 long long read_flash(long long start, unsigned int size, unsigned char *buff)
 {
-	if(g_flash.read)
-		return g_flash.read(start, size, buff);
+	if(g_flash->read)
+		return g_flash->read(start, size, buff);
 	else
 		return FLASH_OP_ERR;
 
@@ -110,8 +121,8 @@ long long read_flash(long long start, unsigned int size, unsigned char *buff)
 
 long long get_flash_capacity(void)
 {
-	if(g_flash.get_capacity)
-		return g_flash.get_capacity(global_flash_id);
+	if(g_flash->get_capacity)
+		return g_flash->get_capacity(global_flash_id);
 	else
 		return FLASH_OP_ERR;
 }
@@ -123,17 +134,25 @@ long long read_flash_from_part(unsigned int part, long long start, unsigned int 
 	//switch to specific part
 	part_addr = switch_flash_part(part);
 	if(part_addr < 0) {
-		ERR("flash: error when switch to boot partion %d(err = %d).\n", part, part_addr);
+		NOTICE("flash: can't switch to partion %d\n", part);
 		return FLASH_OP_ERR;
 	}
 	return read_flash((part_addr + start), size, buff);
 }
 
+long long erase_flash(long long start, unsigned int size)
+{
+	if(g_flash->erase)
+		return g_flash->erase(start, size);
+	else
+		return FLASH_OP_ERR;
+
+}
 
 long long write_flash(long long start, unsigned int size, unsigned char *buff)
 {
-	if(g_flash.write)
-		return g_flash.write(start, size, buff);
+	if(g_flash->write)
+		return g_flash->write(start, size, buff);
 	else
 		return FLASH_OP_ERR;
 
@@ -142,8 +161,8 @@ long long write_flash(long long start, unsigned int size, unsigned char *buff)
 
 unsigned int flash_dev_id_inc(unsigned int dev_id)
 {
-	if(g_flash.dev_id_inc)
-		return g_flash.dev_id_inc(dev_id);
+	if(g_flash->dev_id_inc)
+		return g_flash->dev_id_inc(dev_id);
 	else
 		return ++dev_id;
 }

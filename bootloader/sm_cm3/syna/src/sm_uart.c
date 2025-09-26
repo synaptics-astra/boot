@@ -75,6 +75,8 @@ void uart_interrupt_handler(void * param)
 
 }
 
+#endif
+
 int UART_receive_wake_up_signal(void)
 {
 	unsigned int read;
@@ -89,7 +91,6 @@ int UART_receive_wake_up_signal(void)
 	}
 	return bingo;
 }
-#endif
 
 void dbg_port_tx_ready(void)
 {

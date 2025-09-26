@@ -23,6 +23,6 @@ void dbg_port_tx_ready();
 unsigned int dbg_port_rx_ready(void);
 void dbg_port_rx_flush();
 void put_char(char ch);
-//int UART_receive_wake_up_signal();
+int UART_receive_wake_up_signal();
 
 #endif /* __SM_UART_HEADER__ */

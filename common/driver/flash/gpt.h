@@ -191,4 +191,18 @@ struct gpt_ent {
 #define	GPT_ENT_TYPE_BIOS_BOOT		\
 	{0x21686148,0x6449,0x6e6f,0x74,0x4e,{0x65,0x65,0x64,0x45,0x46,0x49}}
 
+#define MAX_GPT_ENTRY 128
+#define MAX_ENT_NAME  36
+#define MAX_HDR_SIZE  100
+
+struct gpt_ent_part {
+	unsigned int part;
+	struct gpt_ent gpt;
+};
+
+typedef struct {
+	int num;
+	struct gpt_ent_part entry[MAX_GPT_ENTRY];
+}gpt_table_t;
+
 #endif /* _SYS_GPT_H_ */

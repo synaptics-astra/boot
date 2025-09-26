@@ -1300,6 +1300,10 @@ int do_emmc_switch_part(unsigned int PartNum)
 		return 0; // if we have switched to this part, just return
 	}
 
+	if ((dwcmshc_params.mmc_dev_type == MMC_IS_SD || dwcmshc_params.mmc_dev_type == MMC_IS_SD_HC)
+		&& PartNum > 0)
+		return FLASH_OP_ERR;
+
 	if(power_on == 0){
 		if(mmc_set_ext_csd(CMD_ERASE_GROUP_DEF, SET_BITS, 1)){
 			ERR("EMMC: Clear out Partition Access bits error.\n");
@@ -1313,8 +1317,8 @@ int do_emmc_switch_part(unsigned int PartNum)
 		return FLASH_OP_ERR;
 	}
 
-	if(mmc_set_ext_csd(CMD_EXTCSD_PARTITION_CONFIG, SET_BITS, (PartNum & 0x3))){
-		ERR("EMMC: switch to boot partion %d error.\n", PartNum);
+	if(mmc_set_ext_csd(CMD_EXTCSD_PARTITION_CONFIG, SET_BITS, (PartNum & 0x7))){
+		INFO("EMMC: can't switch to partion %d\n", PartNum);
 		return FLASH_OP_ERR;
 	}
 
