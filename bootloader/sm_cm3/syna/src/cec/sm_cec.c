@@ -869,7 +869,7 @@ hresult sm_process_cec_msg( void* data, INT32 iLen )
 		if (iMsgContent != 0 && iMsgContent != 1)			// in byte #4
 			PRT_INFO("SM CEC:Unexpected Google Setup state=0x%x!!\n",iMsgContent);
 
-			PRT_INFO("SM CEC:pcBody[4]=0x%x.\n",pcBody[4]);		// any better with a byte offset???
+		PRT_INFO("SM CEC:pcBody[4]=0x%x.\n",pcBody[4]);		// any better with a byte offset???
 
 		// Send the message buffer to SoC. Either it will be all 0's (in the case of no Launch request from TV)
 		// or else it will have the CEC message that we received in it.

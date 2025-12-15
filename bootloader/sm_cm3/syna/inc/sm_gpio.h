@@ -75,8 +75,8 @@ typedef struct gpio_isr_desc {
 			.polarity = _polarity, \
 			.gpio_isr = _gpio_isr, }
 
-extern unsigned int __gpio_isr_descs_start__;
-extern unsigned int __gpio_isr_descs_end__;
+extern gpio_isr_desc_t __gpio_isr_descs_start__[];
+extern gpio_isr_desc_t __gpio_isr_descs_end__[];
 
 int sm_gpio_set_input(int port);
 int sm_gpio_read(int port);

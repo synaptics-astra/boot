@@ -479,16 +479,21 @@ static int __attribute__((used)) mv_sm_process_ir_msg(void * data, INT32 len)
  */
 static void sm_send_power_key()
 {
-	UINT32 iMsg = MV_IR_KEY_POWER;
 	switch (wi.wakeup_source) {
 		case MV_SM_WAKEUP_SOURCE_IR:
 		case MV_SM_WAKEUP_SOURCE_WIFI:
 		case MV_SM_WAKEUP_SOURCE_WOL:
 		case MV_SM_WAKEUP_SOURCE_BUTTON:
+#ifdef POWERKEY_2_ANDROID
+			{
+			UINT32 iMsg = MV_IR_KEY_POWER;
+
 			sm_send_msg(MV_SM_ID_IR, (unsigned char*)(&iMsg), sizeof(iMsg));
 			iMsg |= 0x8000000;
 			sm_send_msg(MV_SM_ID_IR, (unsigned char*)(&iMsg), sizeof(iMsg));
 			PRT_DEBUG("send power key");
+			}
+#endif
 			break;
 		default:
 			PRT_DEBUG("do not send power key");

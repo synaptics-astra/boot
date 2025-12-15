@@ -493,9 +493,6 @@ int check_fastlogo_start()
  ***********************************************/
 
 #define ANDROID_AB_COMMAND_KEY		"bootctrl.metadata"
-#define SYNA_SPACE_OFFSET_IN_MISC   4096
-
-
 
 static int BootAB_sel = BOOTSEL_A;
 static boot_ctrl_t bctrl = {0};
@@ -521,7 +518,7 @@ static bool bootctrl_is_valid(void)
 static bool slot_is_bootable(int slot_num)
 {
 	if (fts_exist) {
-		slot_metadata_t *pABSlot = &bctrl.slot_info[slot_num];
+		struct slot_metadata *pABSlot = &bctrl.slot_info[slot_num];
 		if(slot_num ? bctrl.slot_b_verity_corrupted : bctrl.slot_a_verity_corrupted) {
 			NOTICE("slot_%s is dm-verity corrupted\n", slot_name(slot_num));
 			return 0;
@@ -531,7 +528,7 @@ static bool slot_is_bootable(int slot_num)
 				(pABSlot->successful_boot || (pABSlot->tries_remaining > 0)));
 	}
 	else if (bootctrl_is_exist()) {
-		misc_slot_metadata_t *pABSlot = &misc_bctrl.slot_info[slot_num];
+		struct misc_slot_metadata *pABSlot = &misc_bctrl.slot_info[slot_num];
 		return (pABSlot->priority > 1 && pABSlot->verity_corrupted == 0 &&
 			(pABSlot->successful_boot || (pABSlot->tries_remaining > 0)));
 	}
@@ -645,9 +642,9 @@ static void init_bootctrl(int default_slot)
 		write_bootctrl_metadata((void*)pbootctrl);
 	}
 	else if (bootctrl_is_exist()) {
-		misc_boot_ctrl_t * pbootctrl = &misc_bctrl;
+		struct misc_boot_ctrl * pbootctrl = &misc_bctrl;
 
-		memset((void *)pbootctrl, 0, sizeof(misc_boot_ctrl_t));
+		memset((void *)pbootctrl, 0, sizeof(struct misc_boot_ctrl));
 
 		pbootctrl->slot_info[default_slot].priority        = 8;
 		pbootctrl->slot_info[default_slot].tries_remaining = 2;

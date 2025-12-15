@@ -143,7 +143,7 @@ const unsigned int clock_divider[] =
 int speed_cpu;
 unsigned int RefClkIn = 25;
 unsigned int RefDiv = 2;
-float current_freq[8];
+static float current_freq[8];
 float cpupll_freqs[2];
 
 int diag_clock_change_otherClk(unsigned int index, const struct g_aClock_info_t * g_aClocks)

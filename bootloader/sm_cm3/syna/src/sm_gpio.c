@@ -313,15 +313,13 @@ DECLARE_RT_MODULE(
 static int __attribute__((used)) setup_gpio_init(void)
 {
 	int i = 0;
-	int gpioisrnum = ((unsigned int)(&__gpio_isr_descs_end__)
-		- (unsigned int)(&__gpio_isr_descs_start__))
-		/ sizeof(gpio_isr_desc_t);
+	int gpioisrnum = __gpio_isr_descs_end__ - __gpio_isr_descs_start__;
 
 	int gpio_port;
 	sm_gpio_inttype_level inttype;
 	sm_gpio_int_polarity polarity;
 
-	gpio_isr_desc_t * gpio_isr_desc = (gpio_isr_desc_t *)(&__gpio_isr_descs_start__);
+	gpio_isr_desc_t * gpio_isr_desc = __gpio_isr_descs_start__;
 
 	// clear mask
 	MV_SM_WRITE_REG32(GPIO_INTMASK(0), 0x00);
@@ -341,13 +339,12 @@ static int __attribute__((used)) setup_gpio_init(void)
 
 DECLARE_RT_INIT(gpioisr, INIT_DEV_P_25, setup_gpio_init);
 
-#define GPIO_ISR_START	(&__gpio_isr_descs_start__)
-#define GPIO_ISR_END	(&__gpio_isr_descs_end__)
+#define GPIO_ISR_START	(__gpio_isr_descs_start__)
+#define GPIO_ISR_END	(__gpio_isr_descs_end__)
 
 static gpio_isr_desc_t * gpio_isr_descs;
 
-#define GPIO_ISR_DESCS_NUM		(((unsigned int)GPIO_ISR_END - (unsigned int)GPIO_ISR_START)\
-					/ sizeof(gpio_isr_desc_t))
+#define GPIO_ISR_DESCS_NUM	(GPIO_ISR_END - GPIO_ISR_START)
 
 
 static int is_gpio_isr_happen(unsigned int intstatus, unsigned int port)
@@ -366,7 +363,7 @@ static void __attribute__((used)) sm_gpio_isr(void)
 
 	unsigned int gpio_intstatus = MV_SM_READ_REG32(GPIO_INTSTATUS(0));
 
-	gpio_isr_descs = (gpio_isr_desc_t *)GPIO_ISR_START;
+	gpio_isr_descs = GPIO_ISR_START;
 	for(i = 0; i < GPIO_ISR_DESCS_NUM; i++) {
 		gpio_isr_desc = &gpio_isr_descs[i];
 		if(is_gpio_isr_happen(gpio_intstatus, gpio_isr_desc->port) == S_OK) {
