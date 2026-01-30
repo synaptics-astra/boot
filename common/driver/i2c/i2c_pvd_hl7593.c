@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2020 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2020 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -164,7 +164,7 @@ static int hl7593_get_vol(int master_id, int slaveAddr)
 
 static int i2c_get_cpu_volt(void)
 {
-	int volt = hl7593_get_vol(VOUT_CPU_ID, SLAVE_ADDR);
+	int volt = hl7593_get_vol(vout_cpu_id, SLAVE_ADDR);
 
 	if(volt < 0)
 		return 0;
@@ -174,7 +174,7 @@ static int i2c_get_cpu_volt(void)
 
 static int i2c_get_core_volt(void)
 {
-	int volt = hl7593_get_vol(VOUT_CORE_ID, SLAVE_ADDR);
+	int volt = hl7593_get_vol(vout_core_id, SLAVE_ADDR);
 
 	if(volt < 0)
 		return 0;
@@ -206,12 +206,12 @@ static int i2c_set_volt(int master_id, int from, int to)
 
 static int i2c_set_vcpu_volt(int from, int to)
 {
-	return i2c_set_volt(VOUT_CPU_ID, from ,to);
+	return i2c_set_volt(vout_cpu_id, from ,to);
 }
 
 static int i2c_set_vcore_volt(int from, int to)
 {
-	return i2c_set_volt(VOUT_CORE_ID, from ,to);
+	return i2c_set_volt(vout_core_id, from ,to);
 }
 
 const dvfs_ops_t hl7593_ops = {

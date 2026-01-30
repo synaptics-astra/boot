@@ -201,5 +201,6 @@ typedef enum
 
 
 void dwcmshc_mmc_init(dwcmshc_mmc_params_t *params, struct mmc_device_info *info);
+int do_emmc_get_current_enabled_bootpart(void);
 
 #endif /* DW_MMC_H */

@@ -35,15 +35,8 @@
 #include "io.h"
 #include "string.h"
 #include "debug.h"
-
 #include "flash_adaptor.h"
-
-#define SPI_BOOT_PART_NUM 2
-#define SPI_BOOT_PART_SIZE 0x200000
-
-extern void SPIReadFlash(unsigned int, unsigned int, unsigned int);
-extern int spi_write(unsigned int memory, unsigned int offset, int size);
-extern int spi_erase(unsigned int offset, int size);
+#include "spi.h"
 
 static int nor_init(int dev)
 {

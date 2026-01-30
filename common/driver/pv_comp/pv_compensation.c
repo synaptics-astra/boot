@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2018 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -289,7 +289,7 @@ static const dvfs_ops_t *get_dvfs_ops(unsigned int pmic_id)
 {
 	const dvfs_ops_t * dvfs_ops = NULL;
 
-	INFO("PMIC: %s selected for board %s !\n", get_pmic_name(pmic_id), CONFIG_PLATFORM);
+	INFO("PMIC: %s selected for board!\n", get_pmic_name(pmic_id));
 	switch (pmic_id) {
 		case M88PG86X:
 			dvfs_ops = &m88pg86x_ops;
@@ -325,6 +325,9 @@ static const dvfs_ops_t *get_dvfs_ops(unsigned int pmic_id)
 
 		case FP6359:
 			dvfs_ops = &fp6359_ops;
+			break;
+		case TPS6287X:
+			dvfs_ops = &TPS6287X_ops;
 			break;
 
 		case PMIC_UNKNOW:

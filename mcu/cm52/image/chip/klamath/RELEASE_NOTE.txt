@@ -1,3 +1,26 @@
+SL2610 Astra 2.2.0 MCU binary release
+
+====================================
+
+ - MCU SDK release version 1.3
+ - git commit 3fab7550e [TAG:SL2610_ASTRA_2.2_RELEASE]
+ - Support RDK revA, revB and revC board
+ - Support DDR type DDR3, DDR4 2/4GB and LPDDR4
+ - ASOC power mode : suspend resume and poweroff
+ - Resume wakeup with UART 'w' wakeup key
+ - USB boot source support with eMMC Flashing
+
+
+SL2610 SM Binary Update 
+
+ - release version 1.3
+ - included revC support
+ - 2GB boot strap handling
+ - ASOC power modes : suspend resume and power off
+ - Resume Wakeup with UART 'w' wakeup from keyboard
+ - 1.3 Target features: USB boot (download & flash) and SPWM
+ - USB Boot not enabled
+
 SL2610_SM_RC1.1 (FPGA build)
 ===========================
 RC1.1 release as a prebuilt package to boot REE and TEE images from eMMC/XSPI device

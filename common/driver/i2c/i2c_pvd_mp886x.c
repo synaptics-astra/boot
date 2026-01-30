@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2020 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2020 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -41,14 +41,6 @@
 #include "apbRegBase.h"
 #include "pv_comp.h"
 #include "pinmux.h"
-
-#ifndef VOUT_CPU_ID
-#define VOUT_CPU_ID                             (1)
-#endif
-
-#ifndef VOUT_CORE_ID
-#define VOUT_CORE_ID                    (2)
-#endif
 
 #define VCORE_SLAVE_ADDR 0x60
 #define VCPU_SLAVE_ADDR 0x62
@@ -368,14 +360,12 @@ static int mp8867_init(int master_id, int slave_addr)
 static int i2c_set_vcpu_volt(int from, int to)
 {
 	UNUSED(from);
-	return mp8867_set_vol(VOUT_CPU_ID, VCPU_SLAVE_ADDR, to);
+	return mp8867_set_vol(vout_cpu_id, VCPU_SLAVE_ADDR, to);
 }
 
 static int i2c_get_cpu_volt(void)
 {
-	//TW1B Selected
-	PINMUX_TW1_SELECT(1);
-	int volt = mp886x_get_volt(VOUT_CPU_ID, VCPU_SLAVE_ADDR);
+	int volt = mp886x_get_volt(vout_cpu_id, VCPU_SLAVE_ADDR);
 
 	if(volt < 0)
 		return 0;
@@ -390,9 +380,7 @@ static int i2c_get_cpu_volt(void)
 
 static int i2c_get_core_volt(void)
 {
-	//TW2B Selected
-	PINMUX_TW2_SELECT(1);
-	int volt = mp886x_get_volt(VOUT_CORE_ID, VCORE_SLAVE_ADDR);
+	int volt = mp886x_get_volt(vout_core_id, VCORE_SLAVE_ADDR);
 	if(volt < 0)
 		return 0;
 
@@ -409,18 +397,18 @@ static int i2c_set_vcore_volt(int from, int to)
 {
 	UNUSED(from);
 
-	return mp8869_set_vol(VOUT_CORE_ID, VCORE_SLAVE_ADDR, to);
+	return mp8869_set_vol(vout_core_id, VCORE_SLAVE_ADDR, to);
 }
 
 static int i2c_ops_init(void)
 {
 	int ret = S_OK;
 
-	ret = mp8867_init(VOUT_CPU_ID, VCPU_SLAVE_ADDR);
+	ret = mp8867_init(vout_cpu_id, VCPU_SLAVE_ADDR);
 	if (ret != S_OK)
 		dbg_printf(PRN_ERR, "OPS init fial: %d %s\n", __LINE__, __func__);
 
-	ret = mp8869_init(VOUT_CORE_ID, VCORE_SLAVE_ADDR);
+	ret = mp8869_init(vout_core_id, VCORE_SLAVE_ADDR);
 	if (ret != S_OK)
 		dbg_printf(PRN_ERR, "OPS init fial: %d %s\n", __LINE__, __func__);
 
@@ -430,26 +418,26 @@ static int i2c_ops_init(void)
 #ifdef MP886X_DBG
 static void mp886x_vcpu_set_verify(void)
 {
-	int volt = mp886x_get_volt(VOUT_CPU_ID, VCPU_SLAVE_ADDR);
+	int volt = mp886x_get_volt(vout_cpu_id, VCPU_SLAVE_ADDR);
 	dbg_printf(PRN_NONE, "vcpu:%dmV\n", volt * 1000);
 	dbg_printf(PRN_NONE, "set voltage to 0.82V\n");
 	i2c_set_vcpu_volt(800000, 820000);
-	volt = mp886x_get_volt(VOUT_CPU_ID, VCPU_SLAVE_ADDR);
+	volt = mp886x_get_volt(vout_cpu_id, VCPU_SLAVE_ADDR);
 	dbg_printf(PRN_NONE, "TO 0.82V:vcpu:%d\n", volt * 1000);
 	i2c_set_vcpu_volt(820000, 800000);
-	volt = mp886x_get_volt(VOUT_CPU_ID, VCPU_SLAVE_ADDR);
+	volt = mp886x_get_volt(vout_cpu_id, VCPU_SLAVE_ADDR);
 	dbg_printf(PRN_NONE, "BACK TO 0.8V,vcpu:%d\n", volt * 1000);
 }
 static void mp886x_vcore_set_verify(void)
 {
-	int volt = mp886x_get_volt(VOUT_CORE_ID, VCORE_SLAVE_ADDR);
+	int volt = mp886x_get_volt(vout_core_id, VCORE_SLAVE_ADDR);
 	dbg_printf(PRN_NONE, "vcore:%dmV\n", volt * 1000);
 	dbg_printf(PRN_NONE, "set voltage to 0.85V\n");
 	i2c_set_vcore_volt(800000, 850000);
-	volt = mp886x_get_volt(VOUT_CORE_ID, VCORE_SLAVE_ADDR);
+	volt = mp886x_get_volt(vout_core_id, VCORE_SLAVE_ADDR);
 	dbg_printf(PRN_NONE, "TO 0.85V:vcore:%d\n", volt * 1000);
 	i2c_set_vcore_volt(850000, 800000);
-	volt = mp886x_get_volt(VOUT_CORE_ID, VCORE_SLAVE_ADDR);
+	volt = mp886x_get_volt(vout_core_id, VCORE_SLAVE_ADDR);
 	dbg_printf(PRN_NONE, "BACK TO 0.8V,vcore:%d\n", volt * 1000);
 }
 #endif

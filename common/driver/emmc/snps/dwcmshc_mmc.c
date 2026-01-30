@@ -1374,3 +1374,16 @@ unsigned long do_emmc_rpmbCapacity(void)
 	return (ext_csd[CMD_RPMB_SIZE_MULT]);
 }
 
+int do_emmc_get_current_enabled_bootpart(void)
+{
+	unsigned char __attribute__((aligned(64))) ext_csd[512];
+	unsigned int boot_partition_enable;
+
+	if(dwcmshc_emmcread_extcsd(ext_csd) != 0) {
+		ERR("get EXTCSD Error !\n");
+		return 0;
+	}
+
+	boot_partition_enable = (ext_csd[CMD_EXTCSD_PARTITION_CONFIG] >> 3) & 0x7;
+	return boot_partition_enable;
+}

@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2018 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -36,6 +36,7 @@
 #include "debug.h"
 #include "flash_adaptor.h"
 #include "mmc.h"
+#include "dwcmshc_mmc.h"
 
 static unsigned int current_part = 0xF;
 
@@ -138,6 +139,7 @@ struct flash_adaptor mmc_g_flash= {
 	.write = write_emmc,
 	.set_parameters = emmc_set_parameters,
 	.stop_alt_boot_mode = do_emmc_stop_alt_boot_mode,
+	.get_current_enabled_bootpart = do_emmc_get_current_enabled_bootpart,
 };
 
 static void emmc_set_parameters(int blocksize, int pagesize, int addrcycle)

@@ -202,6 +202,9 @@ gpt_load_done:
 		}
 	}
 
+	if (gptes.num == 0)
+			return -1;
+
 	return 0;
 
 gpt_err:

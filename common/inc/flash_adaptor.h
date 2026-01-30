@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2018 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -43,6 +43,7 @@ enum flash_dev_type {
 	FLASH_DEV_EMMC = 0,
 	FLASH_DEV_SD,
 	FLASH_DEV_SPI,
+	FLASH_DEV_INVALID = -1,
 };
 
 struct flash_adaptor {
@@ -64,6 +65,7 @@ struct flash_adaptor {
 	long long (*erase)(long long start, unsigned int size);
 	long long (*read)(long long start, unsigned int size, unsigned char *buff);
 	long long (*write)(long long start, unsigned int size, unsigned char *buff);
+	int (*get_current_enabled_bootpart)(void);
 };
 void set_flash_parameters(int blocksize, int pagesize, int addrcycle);
 size_t get_block_size();
@@ -71,7 +73,7 @@ size_t get_page_size();
 size_t get_boot_part_size();
 int get_addr_cycle();
 int get_boot_partition_number(void);
-int init_flash();
+int init_flash(int dev);
 int switch_flash_part(unsigned int part);
 unsigned int flash_dev_id_inc(unsigned int dev_id);
 long long read_flash(long long start, unsigned int size, unsigned char *buff);

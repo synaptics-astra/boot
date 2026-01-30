@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2020 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2020 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -39,19 +39,11 @@
 #include "memmap.h"
 #include "pwm.h"
 
-#ifndef VOUT_CPU_CH
-#define VOUT_CPU_CH                     (3)
-#endif
-
-#ifndef VOUT_CORE_CH
-#define VOUT_CORE_CH                    (2)
-#endif
-
 // all defined under uv
 #define FP6359_STEPuV 304
 #define MIN_VOLTAGE 700000
 #define MAX_VOLTAGE 1000000
-#define MAX_PWM_CH 4
+#define MAX_PWM_CH 3
 
 #define RSVD		0xFFFFFFFF
 
@@ -183,7 +175,7 @@ static int fp6359_get_vol(int pwm_ch)
 
 static int i2c_get_cpu_volt(void)
 {
-	int volt = fp6359_get_vol(VOUT_CPU_CH);
+	int volt = fp6359_get_vol(vout_cpu_ch);
 
 	if(volt < 0)
 		return 0;
@@ -193,7 +185,7 @@ static int i2c_get_cpu_volt(void)
 
 static int i2c_get_core_volt(void)
 {
-	int volt = fp6359_get_vol(VOUT_CORE_CH);
+	int volt = fp6359_get_vol(vout_core_ch);
 
 	if(volt < 0)
 		return 0;
@@ -226,12 +218,12 @@ dutyCyclePwmRead(pwm_ch);
 
 static int i2c_set_vcpu_volt(int from, int to)
 {
-	return i2c_set_volt(VOUT_CPU_CH, from ,to);
+	return i2c_set_volt(vout_cpu_ch, from ,to);
 }
 
 static int i2c_set_vcore_volt(int from, int to)
 {
-	return i2c_set_volt(VOUT_CORE_CH, from ,to);
+	return i2c_set_volt(vout_core_ch, from ,to);
 }
 
 const dvfs_ops_t fp6359_ops = {

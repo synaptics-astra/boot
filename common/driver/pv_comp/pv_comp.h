@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2018 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -54,6 +54,7 @@ extern const dvfs_ops_t hl7593_ops;
 extern const dvfs_ops_t TPS62868_ops;
 extern const dvfs_ops_t rt5739_ops;
 extern const dvfs_ops_t fp6359_ops;
+extern const dvfs_ops_t TPS6287X_ops;
 
 int get_vcpu_opp(unsigned int *opp);
 

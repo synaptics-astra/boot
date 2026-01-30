@@ -548,12 +548,14 @@ static int bootab_slot_select(void)
 		}
 	}
 	else if (bootctrl_is_exist()) {
-		if(misc_bctrl.slot_info[0].priority >= misc_bctrl.slot_info[1].priority) {
-			bootab_sel = BOOTSEL_A;
-		}
-		else{
-			bootab_sel = BOOTSEL_B;
-		}
+		if(misc_bctrl.slot_info[0].priority != misc_bctrl.slot_info[1].priority)
+			return (misc_bctrl.slot_info[0].priority - misc_bctrl.slot_info[1].priority) > 0 ? BOOTSEL_A : BOOTSEL_B;
+
+		if(misc_bctrl.slot_info[0].successful_boot != misc_bctrl.slot_info[1].successful_boot)
+			return (misc_bctrl.slot_info[0].successful_boot - misc_bctrl.slot_info[1].successful_boot) > 0 ? BOOTSEL_A : BOOTSEL_B;
+
+		if(misc_bctrl.slot_info[0].tries_remaining != misc_bctrl.slot_info[1].tries_remaining)
+			return (misc_bctrl.slot_info[0].tries_remaining - misc_bctrl.slot_info[1].tries_remaining) > 0 ? BOOTSEL_A : BOOTSEL_B;
 	}
 
 	return bootab_sel;
@@ -719,6 +721,8 @@ static int check_android_abcommand(void)
 			/* No bootable slots! */
 			ERR("No bootable slots found !!!\n");
 			bootab_sel = BOOTSEL_INVALID;
+			/* Reset bootctrl so that get chance to retry */
+			init_bootctrl(BOOTSEL_B);
 			goto out;
 		}
 	}

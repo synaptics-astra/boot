@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2013-2018 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -41,22 +41,6 @@
 #include "apbRegBase.h"
 #include "timer.h"
 #include "pv_comp.h"
-
-#ifndef VOUT_CPU_ID
-#define VOUT_CPU_ID                             (2)
-#endif
-
-#ifndef VOUT_CORE_ID
-#define VOUT_CORE_ID                    (0)
-#endif
-
-#ifndef VOUT_CPU_CHANNEL
-#define VOUT_CPU_CHANNEL                (0)
-#endif
-
-#ifndef VOUT_CORE_CHANNEL
-#define VOUT_CORE_CHANNEL               (1)
-#endif
 
 // all defined under uv
 #ifndef MINIMAL_VOL_STEP_M88PG86X
@@ -143,7 +127,7 @@ static int diag_i2c_volt_control(int master_id, int volt_index)
 
 static int i2c_get_cpu_volt(void)
 {
-	int volt = i2c_get_volt(VOUT_CPU_ID);
+	int volt = i2c_get_volt(vout_cpu_id);
 
 	if(volt < 0)
 		return 0;
@@ -153,7 +137,7 @@ static int i2c_get_cpu_volt(void)
 
 static int i2c_get_core_volt(void)
 {
-	int volt = i2c_get_volt(VOUT_CORE_ID);
+	int volt = i2c_get_volt(vout_core_id);
 
 	if(volt < 0)
 		return 0;
@@ -190,12 +174,12 @@ static int i2c_set_volt(int master_id, int from, int to)
 
 static int i2c_set_vcpu_volt(int from, int to)
 {
-	return i2c_set_volt(VOUT_CPU_ID, from ,to);
+	return i2c_set_volt(vout_cpu_id, from ,to);
 }
 
 static int i2c_set_vcore_volt(int from, int to)
 {
-	return i2c_set_volt(VOUT_CORE_ID, from ,to);
+	return i2c_set_volt(vout_core_id, from ,to);
 }
 
 const dvfs_ops_t m88pg86x_ops = {

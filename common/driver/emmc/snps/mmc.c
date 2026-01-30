@@ -272,7 +272,7 @@ static int mmc_set_ios(unsigned int clk, unsigned int bus_width)
 		}
 
 		if (__be32_to_cpu(switch_status[3]) & SD_HIGHSPEED_SUPPORTED)
-			ERR("high speed support");
+			ERR("high speed support\n");
 
 		sd3_bus_mode = __be32_to_cpu(switch_status[3]) >> 16 & 0x1f;
 
@@ -562,7 +562,7 @@ static int mmc_enumerate(unsigned int clk, unsigned int bus_width)
 
 long long get_mmc_size(void)
 {
-	return c_size;
+	return (c_size+1)*512*1024*1024;
 }
 
 size_t mmc_read_extcsd(int lba, uintptr_t buf)
