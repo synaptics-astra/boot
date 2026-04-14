@@ -32,6 +32,9 @@
  * TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS.
  */
 #include "sm_type.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
 
 #include "platform_config.h"
 
@@ -40,9 +43,12 @@
 #include "sm_power.h"
 #include "sm_timer.h"
 #include "sm_printf.h"
+#include "sm_func.h"
 
 #include "sm_gpio.h"
 #include "sm_rt_module.h"
+
+static TimerHandle_t wifireset_timer = NULL;
 
 #ifdef SM_GPIO_WIFIBT_POWER
 
@@ -65,6 +71,26 @@ static hresult mv_sm_wifibt_power_ctrl(BOOL on)
 }
 
 #endif
+
+static void sm_wifireset_timer_isr(TimerHandle_t xtimer)
+{
+	board_wifi_poweron();
+
+	if(xTimerStop(wifireset_timer, 0) == pdFAIL)
+		PRT_ERROR("wifireset timer can't be stopped\n");
+}
+
+static void sm_wifi_reset(void)
+{
+	board_wifi_poweroff();
+
+	if (wifireset_timer != NULL) {
+		if ( xTimerIsTimerActive(wifireset_timer) == pdFALSE ) {
+			if(xTimerStart(wifireset_timer, pdMS_TO_TICKS(1)) == pdFAIL)
+				PRT_ERROR("wifireset timer can't be started\n");
+		}
+	}
+}
 
 hresult mv_sm_process_internal_wifibt_msg(void * data, INT32 len)
 {
@@ -100,3 +126,20 @@ DECLARE_RT_MODULE(
 	mv_sm_process_internal_wifibt_msg
 );
 
+static int __attribute__((used)) power_wifibt_init(void)
+{
+	/* Crate Wifireset timer */
+	if (wifireset_timer == NULL) {
+		// Create timer during system init
+		wifireset_timer = xTimerCreate("wifireset",
+				pdMS_TO_TICKS(200), // 200ms
+				pdFAIL,
+				0,
+				sm_wifireset_timer_isr);
+	}
+	if (wifireset_timer == NULL)
+		PRT_ERROR("wifireset timer request failed\n");
+
+	return S_OK;
+}
+DECLARE_RT_INIT(power_wifibt, INIT_DEV_P_25, power_wifibt_init);

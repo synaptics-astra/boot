@@ -329,9 +329,14 @@ static int __attribute__((used)) setup_gpio_init(void)
 	// initialize the gpio int
 	for(i = 0;i < gpioisrnum; i++) {
 		gpio_port = gpio_isr_desc[i].port;
+		sm_gpio_int_disable(gpio_port);
+		sm_gpio_clearint(gpio_port);
+		sm_gpio_set_input(gpio_port);
+
 		inttype = gpio_isr_desc[i].inttype;
 		polarity = gpio_isr_desc[i].polarity;
 		sm_gpio_set_int(gpio_port, inttype, polarity);
+		sm_gpio_int_enable(gpio_port);
 	}
 
 	return S_OK;
@@ -339,13 +344,7 @@ static int __attribute__((used)) setup_gpio_init(void)
 
 DECLARE_RT_INIT(gpioisr, INIT_DEV_P_25, setup_gpio_init);
 
-#define GPIO_ISR_START	(__gpio_isr_descs_start__)
-#define GPIO_ISR_END	(__gpio_isr_descs_end__)
-
 static gpio_isr_desc_t * gpio_isr_descs;
-
-#define GPIO_ISR_DESCS_NUM	(GPIO_ISR_END - GPIO_ISR_START)
-
 
 static int is_gpio_isr_happen(unsigned int intstatus, unsigned int port)
 {
@@ -368,7 +367,7 @@ static void __attribute__((used)) sm_gpio_isr(void)
 		gpio_isr_desc = &gpio_isr_descs[i];
 		if(is_gpio_isr_happen(gpio_intstatus, gpio_isr_desc->port) == S_OK) {
 			if(gpio_isr_desc->gpio_isr != NULL) {
-				gpio_isr_desc->gpio_isr();
+				gpio_isr_desc->gpio_isr(gpio_isr_desc->port);
 			}
 		}
 	}

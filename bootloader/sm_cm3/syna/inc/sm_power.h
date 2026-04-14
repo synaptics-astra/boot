@@ -112,8 +112,6 @@ int sm_setup_power_down_timer(int msg);
 
 void sm_set_reboot_reason(UINT32 reboot_reason);
 
-void sm_wifi_reset(void);
-void eth_wifibt_wakeup_handler(void);
 void fpbutton_wakeup_handler(void);
 
 /* misc thing related with power */

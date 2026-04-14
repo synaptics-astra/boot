@@ -151,20 +151,20 @@ static int __attribute__((used)) sm_gpiobtn_init(void)
 
 DECLARE_RT_INIT(gpiobtninit, INIT_DEV_P_25, sm_gpiobtn_init);
 
-static void __attribute__((used)) sm_gpiobtn_isr(void)
+static void __attribute__((used)) sm_gpiobtn_isr(int port)
 {
 	UINT32 pol = 0;
 	INT32 dur = 0;
 	INT32 release_time = 0;
 
-	pol = sm_gpio_get_polarity(SM_GPIO_PORT_GPIOBTN);
+	pol = sm_gpio_get_polarity(port);
 	if (FALLING_EDGE == pol) {
 		if (press_time == 0) {
 			press_time = mv_sm_timer_gettimems();
 			PRT_DEBUG("key pressed.press time = %d\n", press_time);
 			long_press_time = 0;
 
-			sm_gpio_set_polarity(SM_GPIO_PORT_GPIOBTN, RISING_EDGE);
+			sm_gpio_set_polarity(port, RISING_EDGE);
 		} else {
 			PRT_DEBUG("we missed a rising edge interrupt.\n");
 			press_time = 0;
@@ -178,11 +178,11 @@ static void __attribute__((used)) sm_gpiobtn_isr(void)
 			long_press_time = dur;
 		}
 
-		sm_gpio_set_polarity(SM_GPIO_PORT_GPIOBTN, FALLING_EDGE);
+		sm_gpio_set_polarity(port, FALLING_EDGE);
 
 		press_time = 0;
 	}
-	sm_gpio_clearint(SM_GPIO_PORT_GPIOBTN);
+	sm_gpio_clearint(port);
 }
 
 DECLARE_GPIO_ISR(SM_GPIO_PORT_GPIOBTN, EDGE_SENSITIVE, FALLING_EDGE, sm_gpiobtn_isr);

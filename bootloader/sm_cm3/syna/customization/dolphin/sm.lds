@@ -37,6 +37,10 @@ SECTIONS
 		__gpio_isr_descs_start__ = .;
 		KEEP(*(gpio_isr_descs))
 		__gpio_isr_descs_end__ = .;
+		. = ALIGN(8);
+		__gpio_wakeup_descs_start__ = .;
+		KEEP(*(gpio_wakeup_descs))
+		__gpio_wakeup_descs_end__ = .;
 		. = ALIGN(4);
 	} > TCMRAM
 

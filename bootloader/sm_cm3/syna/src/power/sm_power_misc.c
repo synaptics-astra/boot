@@ -60,13 +60,13 @@ void fpbutton_wakeup_handler(void)
 	}
 }
 
-void mv_sm_fpstby_isr(void)
+void mv_sm_fpstby_isr(int port)
 {
         if(mv_sm_get_state() != MV_SM_STATE_ACTIVE){
                 fpbutton_wakeup = TRUE;
         }
 
-        sm_gpio_clearint(SM_GPIO_PORT_FP_STBY);
+        sm_gpio_clearint(port);
         PRT_INFO("FP STBY INT!\n");
 }
 

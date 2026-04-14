@@ -55,7 +55,7 @@ typedef enum
 }sm_gpio_debounce;
 
 /* Prototype for gpio isr function */
-typedef void (* gpio_isr_func)(void);
+typedef void (* gpio_isr_func)(int);
 
 typedef struct gpio_isr_desc {
 	int port;						/* SM gpio port number */
@@ -77,6 +77,10 @@ typedef struct gpio_isr_desc {
 
 extern gpio_isr_desc_t __gpio_isr_descs_start__[];
 extern gpio_isr_desc_t __gpio_isr_descs_end__[];
+
+#define GPIO_ISR_START	(__gpio_isr_descs_start__)
+#define GPIO_ISR_END	(__gpio_isr_descs_end__)
+#define GPIO_ISR_DESCS_NUM	(GPIO_ISR_END - GPIO_ISR_START)
 
 int sm_gpio_set_input(int port);
 int sm_gpio_read(int port);

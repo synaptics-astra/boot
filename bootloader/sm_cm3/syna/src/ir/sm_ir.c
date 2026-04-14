@@ -176,7 +176,7 @@ unsigned int length_caculate(unsigned int ticks,unsigned int prev_ticks)
 	return ((ticks > prev_ticks) ? (ticks - prev_ticks) : (ticks - prev_ticks + INT_MS*1000*SM_SYSTEM_HZ));
 }
 
-void mv_sm_ir_isr(void)
+void mv_sm_ir_isr(int port)
 {
 	static unsigned int iPrev_ticks = 0;
 	static int ir_current_set_rise = 0;
@@ -193,9 +193,9 @@ void mv_sm_ir_isr(void)
 	ir_current_set_rise ^= 1;
 
 	if(ir_current_set_rise) {
-		sm_gpio_set_polarity(SM_GPIO_PORT_IR, RISING_EDGE);
+		sm_gpio_set_polarity(port, RISING_EDGE);
 	} else {
-		sm_gpio_set_polarity(SM_GPIO_PORT_IR, FALLING_EDGE);
+		sm_gpio_set_polarity(port, FALLING_EDGE);
 	}
 
 	// Store the current level length to circular buffer
@@ -206,7 +206,7 @@ void mv_sm_ir_isr(void)
 	iPrev_ticks = iCurr_ticks;
 
 	// Clear interrupt
-	sm_gpio_clearint(SM_GPIO_PORT_IR);
+	sm_gpio_clearint(port);
 
 	return;
 }

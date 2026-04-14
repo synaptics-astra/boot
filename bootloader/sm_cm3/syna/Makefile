@@ -147,7 +147,7 @@ cSRCS += \
 	 $(SYNA_DIR)/src/power/sm_power_flow.c \
 	 $(SYNA_DIR)/src/power/sm_power_op.c \
 	 $(SYNA_DIR)/src/power/sm_power_timer.c \
-	 $(SYNA_DIR)/src/power/sm_power_eth.c \
+	 $(SYNA_DIR)/src/power/sm_gpio_wakeup.c \
 	 $(SYNA_DIR)/src/power/sm_power_misc.c \
 	 $(SYNA_DIR)/src/power/sm_power_uart.c \
 	 $(SYNA_DIR)/src/sm_i2c_raw.c \

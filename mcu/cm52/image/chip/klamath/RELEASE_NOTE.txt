@@ -1,3 +1,12 @@
+SL2610_ASTRA_2_3_RC1_0
+===============
+ - SRSDK - 1.4 release [TAG: SL2610_ASTRA_2_3_RC1_0]
+ - DDR4 1x16bit supported, DHL release 0p41
+ - removed SM_UART1 pinmux
+ - eMMC flashing from USB boot
+ - NAND boot supported (Randomizer disabled)
+
+ 
 SL2610 Astra 2.2.0 MCU binary release
 
 ====================================

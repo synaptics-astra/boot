@@ -367,7 +367,7 @@ int init_bootmode(void)
 	int num = 0;
 
 	num = get_pt_index(FTS_NAME);
-	if(num > 0)
+	if(num >= 0)
 	{
 		union partition_entry pt_fts;
 		fts_exist = TRUE;
@@ -383,14 +383,14 @@ int init_bootmode(void)
 	}
 
 	num = get_pt_index(DEVINFO_NAME);
-	if(num > 0)
+	if(num >= 0)
 	{
 		devinfo_exist = TRUE;
 		read_boot_info_from_flash();
 	}
 
 	num = get_pt_index(MISC_NAME);
-	if(num > 0)
+	if(num >= 0)
 		misc_exist = TRUE;
 
 	return 0;

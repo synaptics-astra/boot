@@ -266,9 +266,6 @@ static hresult mv_sm_power_flow_warmdown(SM_POWER_FLOW flow)
 		reg.uSM_CTRL_SM2SOC_SW_INTR = 0;
 		MV_SM_WRITE_REG32(SM_MEMMAP_SMREG_BASE + RA_smSysCtl_SM_CTRL,reg.u32);
 
-		#ifdef GETHENABLE
-		geth_wakeup= FALSE;
-		#endif
 		#ifdef FPSTBYENABLE
 		fpbutton_wakeup = FALSE;
 		#endif
@@ -536,7 +533,6 @@ static hresult mv_sm_power_flow_idle()
 	if( (state == MV_SM_STATE_LOWPOWERSTANDBY) ||
 		(state == MV_SM_STATE_NORMALSTANDBY) ||
 		(state == MV_SM_STATE_SUSPEND)) {
-		eth_wifibt_wakeup_handler();
 #ifdef FPSTBYENABLE
 		fpbutton_wakeup_handler();
 #endif
@@ -666,10 +662,6 @@ static int __attribute__((used)) mv_sm_process_power_msg(void * data, INT32 len)
 			{
 				is_linux_ready = TRUE;
 
-				is_wakeup = FALSE;
-				#ifdef GETHENABLE
-				geth_wakeup = FALSE;
-				#endif
 				#ifdef FPSTBYENABLE
 				fpbutton_wakeup = FALSE;
 				#endif

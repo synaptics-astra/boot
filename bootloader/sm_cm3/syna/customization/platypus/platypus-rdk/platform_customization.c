@@ -27,6 +27,9 @@
 #include "sm_func.h"
 #include "sm_fxl6408.h"
 #include "sm_gpio.h"
+#include "sm_gpio_wakeup.h"
+#include "sm_common.h"
+#include "sm_power.h"
 
 #include "platform_config.h"
 
@@ -96,3 +99,28 @@ void board_wifi_poweroff(void)
 		(1 << GPIO_WIFI), (WIFI_OFF << GPIO_WIFI)) != 0)
 		PRT_ERROR("%s: failed\n", __func__);
 }
+
+DECLARE_GPIO_ISR(SM_GPIO_PORT_WIFIBT, EDGE_SENSITIVE, FALLING_EDGE, sm_gpio_isr);
+
+#ifndef WIFIBT_GAP_MIN
+#define WIFIBT_GAP_MIN	10
+#define WIFIBT_GAP_MAX	125
+#define ETH_GAP_MAX	512
+#endif
+
+#ifndef BTKEY_NETFLIX_GAP_MIN
+#define BTKEY_NETFLIX_GAP_MIN 395
+#define BTKEY_NETFLIX_GAP_MAX 415
+#endif
+
+/* wifi */
+DECLARE_GPIO_WAKEUP(wifi, SM_GPIO_PORT_WIFIBT, 0, (WIFIBT_GAP_MIN *2),
+							MV_SM_WAKEUP_SOURCE_WIFI, 0, 0);
+
+/* bt (not netflix key) */
+DECLARE_GPIO_WAKEUP(bt_otherkey, SM_GPIO_PORT_WIFIBT, (WIFIBT_GAP_MIN *2), BTKEY_NETFLIX_GAP_MIN,
+							MV_SM_WAKEUP_SOURCE_BT, 1, KEY_OTHERS);
+
+/* bt (netflix key) */
+DECLARE_GPIO_WAKEUP(bt_netflixkey, SM_GPIO_PORT_WIFIBT, BTKEY_NETFLIX_GAP_MIN, BTKEY_NETFLIX_GAP_MAX,
+							MV_SM_WAKEUP_SOURCE_BT, 1, KEY_NETFLIX);

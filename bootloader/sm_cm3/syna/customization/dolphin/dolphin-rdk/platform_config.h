@@ -74,7 +74,7 @@
 #define SM_GPIO_PORT_DDR_CTRL GPIO_VDDM
 
 /* WiFi GPIO definitions*/
-#define SM_GPIO_PORT_WIFIBT 6
+#define SM_GPIO_PORT_WIFIBT 7
 #define SM_GPIO_PORT_GEPHY 7
 
 #define WIFIBT_GAP_MIN	10
