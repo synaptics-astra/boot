@@ -72,6 +72,7 @@ size_t get_block_size();
 size_t get_page_size();
 size_t get_boot_part_size();
 int get_addr_cycle();
+int get_flash_type(void);
 int get_boot_partition_number(void);
 int init_flash(int dev);
 int switch_flash_part(unsigned int part);

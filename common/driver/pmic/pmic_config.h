@@ -66,7 +66,7 @@ struct pmic_config {
 #define PMIC_CONFIG_SIZE	  32
 
 extern struct flash_adaptor mmc_g_flash;
-extern struct pmic_config g_pmic_config;
+extern struct pmic_config *g_pmic_config;
 /* Function prototypes */
 int pmic_config_init(void);
 UNSG32 pmic_get_vcore_id(void);

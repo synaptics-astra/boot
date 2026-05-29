@@ -40,7 +40,7 @@
 extern struct flash_adaptor spi_g_flash;
 extern struct flash_adaptor mmc_g_flash;
 
-static int global_flash_id = 0;
+static int global_flash_id = FLASH_DEV_INVALID;
 static struct flash_adaptor *g_flash;
 
 void set_flash_parameters(int blocksize, int pagesize, int addrcycle)
@@ -66,6 +66,11 @@ size_t get_page_size()
 int get_addr_cycle()
 {
 	return g_flash->addr_cycle;
+}
+
+int get_flash_type(void)
+{
+	return global_flash_id;
 }
 
 int get_boot_partition_number(void)

@@ -1,7 +1,7 @@
 /*
  * NDA AND NEED-TO-KNOW REQUIRED
  *
- * Copyright © 2013-2020 Synaptics Incorporated. All rights reserved.
+ * Copyright Â© 2013-2020 Synaptics Incorporated. All rights reserved.
  *
  * This file contains information that is proprietary to Synaptics
  * Incorporated ("Synaptics"). The holder of this file shall treat all
@@ -52,6 +52,9 @@
 #include "sm_comm.h"
 
 #include "sm_adcbtn.h"
+#include "semphr.h"
+
+static SemaphoreHandle_t g_adc_mutex;
 
 #define HIGH_LEV	800
 #define LOW_LEV		220
@@ -293,6 +296,27 @@ static INT32 sm_adc_read(int ch, int sample)
 	return data;
 }
 
+static INT32 sm_adc_read_locked(int ch, int sample)
+{
+	INT32 ret;
+
+	if (g_adc_mutex == NULL) {
+		PRT_ERROR("adc mutex is NULL\n");
+		return -1;
+	}
+
+	if (xSemaphoreTake(g_adc_mutex, portMAX_DELAY) != pdTRUE) {
+		PRT_ERROR("failed to take adc mutex\n");
+		return -1;
+	}
+
+	ret = sm_adc_read(ch, sample);
+
+	xSemaphoreGive(g_adc_mutex);
+
+	return ret;
+}
+
 static void handle_cbtn_press(ADC_INPUT input, INT32 value, unsigned int dur)
 {
 	UINT32 iMsg = MV_IR_KEY_NULL;
@@ -388,7 +412,7 @@ hresult sm_adcbtn_task_entry(void *data)
 	static INT32 key = 0;
 
 	for (i = ADC_INPUT0; i < ADC_INPUT_MAX; i++) {
-		value = sm_adc_read(i, ADC_SAMPLE_TIME);
+		value = sm_adc_read_locked(i, ADC_SAMPLE_TIME);
 
 		if (value < 0)
 			continue;
@@ -443,6 +467,47 @@ hresult sm_adcbtn_task_entry(void *data)
 	return S_OK;
 }
 
+#define MV_SM_ADC_READ  0x01
+
+typedef struct {
+	UINT32 cmd;
+	UINT32 ch;
+	UINT32 sample;
+	UINT32 rsv;
+} sm_adc_req_t;
+
+typedef struct {
+	INT32  ret;
+	UINT32 ch;
+	UINT32 raw;
+	UINT32 rsv;
+} sm_adc_resp_t;
+
+hresult mv_sm_process_adc_msg(void * data, INT32 len)
+{
+	sm_adc_req_t *req = (sm_adc_req_t *)data;
+	sm_adc_resp_t resp;
+
+	if (len < (INT32)sizeof(*req))
+		return S_OK;
+
+	resp.ret = -1;
+	resp.ch  = req->ch;
+	resp.raw = 0;
+	resp.rsv = 0;
+
+	if (req->cmd == MV_SM_ADC_READ) {
+		INT32 raw = sm_adc_read_locked(req->ch, req->sample ? req->sample : 4);
+		if (raw >= 0) {
+			resp.ret = 0;
+			resp.raw = (UINT32)raw;
+		}
+		sm_send_msg(MV_SM_ID_ADC, (unsigned char *)&resp, sizeof(resp));
+	}
+
+	return S_OK;
+}
+
 static void sm_adcbtn_task(void* data)
 {
 	while(1) {
@@ -457,10 +522,10 @@ static void __attribute__((used)) create_adcbtn_task(void)
 }
 
 DECLARE_RT_MODULE(
-	adcbtn,
-	MV_SM_ID_ADCBTN,
+	adc,
+	MV_SM_ID_ADC,
 	create_adcbtn_task,
-	NULL,
+	mv_sm_process_adc_msg,
 	NULL
 );
 
@@ -501,6 +566,14 @@ static void sm_adc_init(void)
 static int __attribute__((used)) sm_adcbtn_init(void)
 {
 	sm_adc_init();
+
+	if (g_adc_mutex == NULL)
+		g_adc_mutex = xSemaphoreCreateMutex();
+
+	if (g_adc_mutex == NULL) {
+		PRT_ERROR("failed to create adc mutex\n");
+		return -1;
+	}
 
 	return S_OK;
 }

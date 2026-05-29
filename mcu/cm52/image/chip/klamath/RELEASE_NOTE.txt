@@ -1,3 +1,13 @@
+SL2610 Astra 2.4.0 release [TAG: ASTRA_2_4_RC2_1]
+=================================================
+1. DDR4x16 C82 profile added
+2. Wifi/BT, Timer(disabled) and SM_GPIO26 wakeup added
+3. BT UART1 pinmux enabled
+4. wakeup time optimization SM: ~60ms
+5. USB boot - XSPI NOR
+6. SD Boot support
+7. coralboard SD boot, UART wakeup
+
 SL2610_ASTRA_2_3_RC1_0
 ===============
  - SRSDK - 1.4 release [TAG: SL2610_ASTRA_2_3_RC1_0]
@@ -6,7 +16,7 @@ SL2610_ASTRA_2_3_RC1_0
  - eMMC flashing from USB boot
  - NAND boot supported (Randomizer disabled)
 
- 
+
 SL2610 Astra 2.2.0 MCU binary release
 
 ====================================
@@ -20,7 +30,7 @@ SL2610 Astra 2.2.0 MCU binary release
  - USB boot source support with eMMC Flashing
 
 
-SL2610 SM Binary Update 
+SL2610 SM Binary Update
 
  - release version 1.3
  - included revC support

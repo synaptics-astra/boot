@@ -40,24 +40,59 @@
 
 // all defined under uv
 #define RT5739_STEPuV 5000
-#define MIN_VOLTAGE 300000
-#define MAX_VOLTAGE 1300000
+#define RT5739_MIN_VOLTAGE 300000
+#define RT5739_MAX_VOLTAGE 1300000
+
+#define RT5733_STEPuV 6250
+#define RT5733_MIN_VOLTAGE 270000
+#define RT5733_MAX_VOLTAGE 1401250
 
 #define SLAVE_ADDR 	0x50
 #define RSVD		0xFFFFFFFF
 #define REG_VSEL1	0x1
 #define REG_CTRL	0x2
-#define MAX_VOL_VAL	((MAX_VOLTAGE - MIN_VOLTAGE)/RT5739_STEPuV)
+#define REG_ID1		0x3
+#define DID_MASK	0x0F
+#define RT5733_DID	0x01
+
+static int g_step_uv = RT5739_STEPuV;
+static int g_min_volt = RT5739_MIN_VOLTAGE;
+static int g_max_volt = RT5739_MAX_VOLTAGE;
 
 extern int i2c_master_init(int id, int speed, int b_10bit_addr);
 extern int i2c_master_write_and_read(int id, int target_addr, unsigned char* send_buff, int send_len, unsigned char* recv_buff, int recv_len);
+
+static int rt5739_chip_init(int master_id, int slaveAddr)
+{
+	unsigned char vid = 0;
+	int ret;
+
+	i2c_master_init(master_id, 100, 0);
+	ret = i2c_master_write_and_read(master_id, slaveAddr, (unsigned char*)REG_ID1, 1, &vid, 1);
+	if (ret) {
+		dbg_printf(PRN_ERR, "PMIC rt573x: failed to read VID\n");
+		return ret;
+	}
+
+	if ((vid & DID_MASK) == RT5733_DID) {
+		g_step_uv = RT5733_STEPuV;
+		g_min_volt = RT5733_MIN_VOLTAGE;
+		g_max_volt = RT5733_MAX_VOLTAGE;
+	} else {
+		g_step_uv = RT5739_STEPuV;
+		g_min_volt = RT5739_MIN_VOLTAGE;
+		g_max_volt = RT5739_MAX_VOLTAGE;
+	}
+
+	return 0;
+}
 
 static int rt5739_pmic_volt2data(int volt, int *p_data)
 {
 	unsigned int data;
 
-	if ((volt >= MIN_VOLTAGE) && (volt <= MAX_VOLTAGE))
-		data = (volt - MIN_VOLTAGE) / RT5739_STEPuV;
+	if ((volt >= g_min_volt) && (volt <= g_max_volt))
+		data = (volt - g_min_volt) / g_step_uv;
 	else
 		data = RSVD;
 
@@ -73,9 +108,10 @@ static int rt5739_pmic_data2volt(int *p_volt, int vdata)
 {
 	unsigned int volt;
 	unsigned int data = vdata;
+	int max_val = (g_max_volt - g_min_volt) / g_step_uv;
 
-	if (data <= MAX_VOL_VAL)
-		volt = MIN_VOLTAGE + (data * RT5739_STEPuV);
+	if (data <= max_val)
+		volt = g_min_volt + (data * g_step_uv);
 	else
 		volt = RSVD;
 
@@ -94,6 +130,8 @@ static int rt5739_set_vol(int master_id, int slaveAddr, int volt)
 	unsigned char data;
 	int vdata = 0;
 	int ret = 1;
+
+	rt5739_chip_init(master_id, slaveAddr);
 
 	ret = rt5739_pmic_volt2data(target, &vdata);
 	if (ret == 0) {
@@ -114,14 +152,14 @@ static int rt5739_set_vol(int master_id, int slaveAddr, int volt)
 			return ret;
 		}
 
-		if (buff[1] != data) {
-			dbg_printf(PRN_ERR, "PMIC rt5739: read:0x%02x != write:0x%02x\n", data, buff[1]);
+		if (vdata != data) {
+			dbg_printf(PRN_ERR, "PMIC rt573x: read:0x%02x != write:0x%02x\n", data, vdata);
 			return -1;
 		}
 		mdelay(1);
 	}
 	else {
-		dbg_printf(PRN_ERR, "Illegal target voltage for PMIC rt5739 !\n");
+		dbg_printf(PRN_ERR, "Illegal target voltage for PMIC rt573x !\n");
 		return -1;
 	}
 	return ret;
@@ -131,10 +169,12 @@ static int rt5739_get_vol(int master_id, int slaveAddr)
 {
 	unsigned char read = 0xff;
 	unsigned char buff[2];
-	int volt;
+	int volt = -1;
 	unsigned int bulk_reg = REG_VSEL1;
 	unsigned int bulk_ctrl = REG_CTRL;
 	int ret = 1;
+
+	rt5739_chip_init(master_id, slaveAddr);
 
 	i2c_master_init(master_id, 100, 0);  //int id, int speed, int b_10bit_addr
 
@@ -188,11 +228,11 @@ static int i2c_set_volt(int master_id, int from, int to)
 
 	while (volt != to){
 		if (volt > to){
-			volt -= RT5739_STEPuV;
+			volt -= g_step_uv;
 			if (volt < to)
 				volt = to;
 		}else{
-			volt += RT5739_STEPuV;
+			volt += g_step_uv;
 			if (volt > to)
 				volt = to;
 		}
