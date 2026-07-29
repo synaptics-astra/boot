@@ -33,46 +33,16 @@
  */
 #include "pmic_config.h"
 #include "boot_config.h"
-#include "flash_adaptor.h"
 #include "pmic_select.h"
+#include "pmic_pinmux.h"
 #include "printf.h"
 #include "string.h"
-#ifdef CONFIG_GENX_ENABLE
-#include "bm_generic.h"
-#endif
-#if defined(SPI_BOOT_LINUX)
-#include "boot_mode.h"
-#include "spi.h"
-#endif
-
-#define PMIC_CONFIG_SZ 0x20
-/* EMMC: Position: 512KB - 3KB - 32 */
-#define EMMC_PREBOOT_PT_SZ (512 * 1024)
-#define EMMC_PMIC_CONFIG_OFFSET (EMMC_PREBOOT_PT_SZ - 3072 - PMIC_CONFIG_SZ)
-/* SPI: Position: 512KB - 3KB - 32 + 1KB(header) */
-#define SPI_PREBOOT_PT_SZ (512 * 1024)
-#define SPI_PMIC_CONFIG_OFFSET (SPI_PREBOOT_PT_SZ - 2048 - PMIC_CONFIG_SZ)
-
-
-
-extern int do_emmc_get_current_enabled_bootpart(void);
+#include "gpio.h"
 
 struct pmic_config *g_pmic_config;
-static int g_pmic_config_valid = 0;
-__attribute__((aligned(64))) unsigned char pmic_buf[512] = {0};
 
-static const char* pmic_model_names[] = {
-	[PMIC_MODEL_UNKNOWN] = "unknown",
-	[PMIC_MODEL_M88PG86X] = "m88pg86x",
-	[PMIC_MODEL_SY8824B] = "sy8824b",
-	[PMIC_MODEL_NCP6335D] = "ncp6335d",
-	[PMIC_MODEL_MP886X] = "mp886x",
-	[PMIC_MODEL_SY8827N] = "sy8827n",
-	[PMIC_MODEL_HL7593WL06] = "hl7593wl06",
-	[PMIC_MODEL_TPS62868] = "tps62868",
-	[PMIC_MODEL_RT5739] = "rt573x",
-	[PMIC_MODEL_FP6359] = "fp6359",
-	[PMIC_MODEL_TPS6287X] = "tps6287x",
+char *pmic_model_names[] = {
+	PMIC_MODEL_NAMES_AUTOGEN
 };
 
 static UNSG32 calculate_checksum(const struct pmic_config *config)
@@ -81,7 +51,7 @@ static UNSG32 calculate_checksum(const struct pmic_config *config)
 	const UNSG32 *data = (const UNSG32 *)config;
 	int i;
 
-	for (i = 0; i < (PMIC_CONFIG_SIZE / 4 - 1); i++) {
+	for (i = 0; i < (sizeof(struct pmic_config) / 4 - 1); i++) {
 		checksum ^= data[i];
 	}
 
@@ -115,12 +85,57 @@ int pmic_config_validate(const struct pmic_config *config)
 		return -1;
 	}
 
-	if (config->vcore_id == 0 && config->vcpu_id == 0 && config->pwm_valid == 0) {
-		lgpl_printf("PMIC: Invalid PMIC ID\n");
+	return 0;
+}
+
+static int get_pmic_auto_detection_index(enum voltage_type voltage_type)
+{
+	int gpioh = 0;
+	int gpiol = 0;
+	int pmic_index = 0;
+	int ret = -1;
+	const struct pmic_pinmux_ops *ops;
+
+	ops = pmic_pinmux_get_ops();
+	if (!ops || !ops->set_pinmux)
 		return -1;
+
+	if (voltage_type == VCORE) {
+		if (g_pmic_config->vcore_gpioh == 0xff || g_pmic_config->vcore_gpiol == 0xff)
+			return -1;
+		ret = ops->set_pinmux(g_pmic_config->vcore_gpioh, "gpio", NULL);
+		if (ret)
+			return -1;
+		ret = ops->set_pinmux(g_pmic_config->vcore_gpiol, "gpio", NULL);
+		if (ret)
+			return -1;
+		GPIO_PortRead(g_pmic_config->vcore_gpioh, &gpioh);
+		GPIO_PortRead(g_pmic_config->vcore_gpiol, &gpiol);
+	} else if (voltage_type == VCPU) {
+		if (g_pmic_config->vcpu_gpioh == 0xff || g_pmic_config->vcpu_gpiol == 0xff)
+			return -1;
+		ret = ops->set_pinmux(g_pmic_config->vcpu_gpioh, "gpio", NULL);
+		if (ret)
+			return -1;
+		ret = ops->set_pinmux(g_pmic_config->vcpu_gpiol, "gpio", NULL);
+		if (ret)
+			return -1;
+		GPIO_PortRead(g_pmic_config->vcpu_gpioh, &gpioh);
+		GPIO_PortRead(g_pmic_config->vcpu_gpiol, &gpiol);
 	}
 
-	return 0;
+	gpioh &= 1;
+	gpiol &= 1;
+	pmic_index = (gpioh << 1) | gpiol;
+
+	return pmic_index;
+}
+
+static UNSG32 pmic_get_valid_id(UNSG32 id)
+{
+	if (id == 0 || id == 255)
+		return PMIC_UNKNOW;
+	return id - 1;
 }
 
 int pmic_config_init(void)
@@ -128,45 +143,79 @@ int pmic_config_init(void)
 	int ret = -1;
 	UNSG32 vcore_id;
 	UNSG32 vcpu_id;
+	UNSG32 vcore_auto_index;
+	UNSG32 vcpu_auto_index;
+	UNSG32 vcore_model_id, vcpu_model_id;
 
 	ret = get_pmic_config(&g_pmic_config);
-	if (ret == 0) {
-		g_pmic_config_valid = 1;
-		if (g_pmic_config->pwm_valid == 0) {//I2C
-			lgpl_printf("PMIC: VCORE %s (ID: 0x%02x), VCPU %s (ID: 0x%02x) I2C PMIC detected\n",
-					pmic_get_model_name(g_pmic_config->vcore_id), g_pmic_config->vcore_id,
-					pmic_get_model_name(g_pmic_config->vcpu_id), g_pmic_config->vcpu_id);
-			if (g_pmic_config->vcore_id == 0)
-				vcore_id = PMIC_UNKNOW;
-			else
-				vcore_id = g_pmic_config->vcore_id - 1;
+	if (ret == 0 && pmic_config_validate(g_pmic_config) == 0) {
+		switch (g_pmic_config->pmic_type) {
+		case PMIC_TYPE_I2C:
+			lgpl_printf("I2C PMIC detected: VCORE %s (ID: 0x%02x), VCPU %s (ID: 0x%02x) \n",
+				    pmic_get_model_name(g_pmic_config->vcore_id[0]), g_pmic_config->vcore_id[0],
+				    pmic_get_model_name(g_pmic_config->vcpu_id[0]), g_pmic_config->vcpu_id[0]);
 
-			if (g_pmic_config->vcpu_id == 0)
-				vcpu_id = PMIC_UNKNOW;
-			else
-				vcpu_id = g_pmic_config->vcpu_id - 1;
+			vcpu_id = pmic_get_valid_id(g_pmic_config->vcpu_id[0]);
+			vcore_id = pmic_get_valid_id(g_pmic_config->vcore_id[0]);
 
 			set_pmic_id(vcpu_id, vcore_id);
 			ret = 1;
-		} else if (g_pmic_config->pwm_valid == 1) {//PWM
-			lgpl_printf("PMIC: VCORE ch: 0x%02x, VCPU ch: 0x%02x PWM PMIC detected\n",
-					g_pmic_config->vcore_pwm_ch,
-					g_pmic_config->vcpu_pwm_ch);
-			if (g_pmic_config->vcore_pwm_ch == 0xff)
-				vcore_id = PMIC_UNKNOW;
-			else
-				vcore_id = FP6359;
+			break;
 
-			if (g_pmic_config->vcpu_pwm_ch == 0xff)
-				vcpu_id = PMIC_UNKNOW;
-			else
-				vcpu_id = FP6359;
-
+		case PMIC_TYPE_PWM:
+			lgpl_printf("PWM PMIC detected: VCORE gpio: 0x%02x, VCPU gpio: 0x%02x \n",
+				    g_pmic_config->vcore_pwm_gpio,
+				    g_pmic_config->vcpu_pwm_gpio);
+			vcore_id = (g_pmic_config->vcore_pwm_gpio == 0xff) ? PMIC_UNKNOW : PWM_PMIC;
+			vcpu_id = (g_pmic_config->vcpu_pwm_gpio == 0xff) ? PMIC_UNKNOW : PWM_PMIC;
 			set_pmic_id(vcpu_id, vcore_id);
 			ret = 2;
+			break;
+
+		case PMIC_TYPE_SM_TIMER:
+			vcore_id = (g_pmic_config->vcore_smtmr_gpio == 0xff) ? PMIC_UNKNOW : SMTIMER;
+			vcpu_id = (g_pmic_config->vcpu_smtmr_gpio == 0xff) ? PMIC_UNKNOW : SMTIMER;
+			set_pmic_id(vcpu_id, vcore_id);
+			ret = 3;
+			break;
+
+		case PMIC_TYPE_AUTO:
+			// Here we assume the index maps to I2C models.
+			vcore_auto_index = get_pmic_auto_detection_index(VCORE);
+			if (vcore_auto_index != -1)
+				vcore_id = pmic_get_valid_id(g_pmic_config->vcore_id[vcore_auto_index]);
+			else
+				vcore_id = PMIC_UNKNOW;
+
+			vcpu_auto_index = get_pmic_auto_detection_index(VCPU);
+			if (vcpu_auto_index != -1)
+				vcpu_id = pmic_get_valid_id(g_pmic_config->vcpu_id[vcpu_auto_index]);
+			else
+				vcpu_id = PMIC_UNKNOW;
+
+			lgpl_printf("PMIC Auto Detect index : VCORE:%d, VCPU:%d\n", vcore_auto_index, vcpu_auto_index);
+
+			if (vcore_auto_index != -1 || vcpu_auto_index != -1) {
+				vcore_model_id = (vcore_auto_index == -1) ? 0 : g_pmic_config->vcore_id[vcore_auto_index];
+				vcpu_model_id = (vcpu_auto_index == -1) ? 0 : g_pmic_config->vcpu_id[vcpu_auto_index];
+				lgpl_printf("I2C PMIC detected: VCORE %s (ID: 0x%02x), VCPU %s (ID: 0x%02x) \n",
+					pmic_get_model_name(vcore_model_id), vcore_model_id,
+					pmic_get_model_name(vcpu_model_id), vcpu_model_id);
+
+				set_pmic_id(vcpu_id, vcore_id);
+				ret = 4;
+			} else
+				ret = -1;
+			break;
+
+		default:
+			vcore_id = PMIC_UNKNOW;
+			vcpu_id = PMIC_UNKNOW;
+			lgpl_printf("PMIC: unknown PMIC type (%d)\n", g_pmic_config->pmic_type);
+			set_pmic_id(vcpu_id, vcore_id);
+			break;
 		}
 	} else {
-		g_pmic_config_valid = 0;
 		vcore_id = PMIC_UNKNOW;
 		vcpu_id = PMIC_UNKNOW;
 		lgpl_printf("PMIC: unknown PMIC model\n");
@@ -176,7 +225,7 @@ int pmic_config_init(void)
 	return ret;
 }
 
-const char* pmic_get_model_name(UNSG32 model_id)
+const char *pmic_get_model_name(UNSG32 model_id)
 {
 	if (model_id < sizeof(pmic_model_names) / sizeof(pmic_model_names[0]) &&
 		pmic_model_names[model_id] != NULL) {

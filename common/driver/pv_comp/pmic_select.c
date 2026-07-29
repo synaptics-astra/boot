@@ -34,19 +34,10 @@
 #include "com_type.h"
 #include "debug.h"
 #include "pmic_select.h"
+#include "pmic_autogen.h"
 
-const static char * pmic_name[] = {
-	"M88PG86X",
-	"SY8824B",
-	"NCP6335D",
-	"MP886X",
-	"SY8827N",
-	"HL7593WL06",
-	"TPS62868",
-	"RT5739",
-	"FP6359",
-	"TPS6287X",
-	"UNKNOWN"
+const char *pmic_names[] = {
+	PMIC_MODEL_NAMES_AUTOGEN
 };
 
 static unsigned int default_pmic_vcpu  = PMIC_UNKNOW;
@@ -94,8 +85,8 @@ unsigned int get_default_pmic_id(unsigned int device_id)
 
 const char * get_pmic_name(unsigned int pmic_id)
 {
-	if (pmic_id >= PMIC_UNKNOW)
-		return pmic_name[PMIC_UNKNOW];
+	if (pmic_id >= sizeof(pmic_names))
+		return pmic_names[PMIC_UNKNOW];
 	else
-		return pmic_name[pmic_id];
+		return pmic_names[pmic_id];
 }

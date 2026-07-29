@@ -71,6 +71,7 @@ gpio_isr_desc_t *get_gpio_isr_desc(int port)
 }
 
 #define WIFIBT_STACK_SIZE  ((uint16_t) 128)
+#define MAX_GAP    (1000)
 
 #ifdef POWERKEY_2_ANDROID
 typedef struct {
@@ -152,7 +153,12 @@ static void sm_gpio_timer_isr(TimerHandle_t xtimer)
     }
 
     if (i >= GPIO_WAKEUP_DESCS_NUM) {
-        //PRT_INFO("Invalid signal. gpio_gap: %d\n", gpio_gap);
+        /* ignore the wrong signal */
+        if (gpio_gap >= MAX_GAP) {
+            if(xTimerStop(gpio_timer, 0) == pdFAIL)
+                PRT_ERROR("wifibt timer can't be stopped\n");
+            gpio_gap = 0;
+        }
         return;
     }
 
@@ -162,7 +168,8 @@ static void sm_gpio_timer_isr(TimerHandle_t xtimer)
     /* additional operation for BT */
     if (wakeup_source == MV_SM_WAKEUP_SOURCE_BT) {
 #ifdef POWERKEY_2_ANDROID
-        g_itcm->times ++;
+        /* it's the exact BT key. +5 directly */
+        g_itcm->times += 5;
         g_itcm->is_btinfo = TRUE;
         if (sm_gpio_read(current_port) == RISING_EDGE)
             g_itcm->level = 1;
@@ -177,8 +184,10 @@ static void sm_gpio_timer_isr(TimerHandle_t xtimer)
         PRT_ERROR("wifibt timer can't be stopped\n");
 
     /* check power state after done the handle of bt info */
-    if (!state_to_wait_wakeup())
+    if (!state_to_wait_wakeup()) {
+        gpio_gap = 0;
         return;
+    }
 
     PRT_INFO("%s gpio_gap: %d\n", gpio_wakeup_desc[i].name, gpio_gap);
     gpio_gap = 0;
@@ -224,14 +233,15 @@ static void gpio_wake_task(void *para)
 	while (1) {
 		xSemaphoreTake(gpio_sem, portMAX_DELAY);
 
-		if(state_to_wait_wakeup()) {
+		/* need to detect BT key in active mode */
+		//if(state_to_wait_wakeup()) {
 			if (gpio_timer != NULL) {
 				if ( xTimerIsTimerActive(gpio_timer) == pdFALSE ) {
 					if(xTimerStart(gpio_timer, pdMS_TO_TICKS(1)) == pdFAIL)
 						PRT_ERROR("gpio_timer can't be started\n");
 				}
 			}
-		}
+		//}
 	}
 }
 

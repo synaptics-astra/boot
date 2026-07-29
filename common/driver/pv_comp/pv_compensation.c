@@ -35,8 +35,12 @@
 #include "util.h"
 #include "debug.h"
 #include "chip_voltage_info.h"
+//#include "pmic_config.h"
 #include "pmic_select.h"
 #include "pv_comp.h"
+
+
+const dvfs_ops_t smtimer_ops __attribute__((weak)) = {};
 
 static int find_dvfs_group(struct freq_leakage_table *flt, int pll, int leakage)
 {
@@ -174,7 +178,7 @@ error:
 	return;
 }
 
-int get_vcore_volt_from_dvfs(int gpu_pll, int leakage)
+static int get_vcore_volt_from_dvfs(int gpu_pll, int leakage)
 {
 	struct freq_leakage_table *flt = get_vcore_leakage_table();
 	int ret = 0;
@@ -289,59 +293,60 @@ static const dvfs_ops_t *get_dvfs_ops(unsigned int pmic_id)
 {
 	const dvfs_ops_t * dvfs_ops = NULL;
 
-	INFO("PMIC: %s selected for board!\n", get_pmic_name(pmic_id));
-	switch (pmic_id) {
-		case M88PG86X:
-			dvfs_ops = &m88pg86x_ops;
-			break;
-
-		case SY8824B:
-			dvfs_ops = &sy8824b_ops;
-			break;
-
-		case NCP6335D:
-			dvfs_ops = &ncp6335d_ops;
-			break;
-
-		case MP886X:
-			dvfs_ops = &mp886x_ops;
-			break;
-
-		case SY8827N:
-			dvfs_ops = &sy8827n_ops;
-			break;
-
-		case HL7593WL06:
-			dvfs_ops = &hl7593_ops;
-			break;
-
-		case TPS62868:
-			dvfs_ops = &TPS62868_ops;
-			break;
-
-		case RT5739:
-			dvfs_ops = &rt5739_ops;
-			break;
-
-		case FP6359:
-			dvfs_ops = &fp6359_ops;
-			break;
-		case TPS6287X:
-			dvfs_ops = &TPS6287X_ops;
-			break;
-
-		case PMIC_UNKNOW:
-			// do nothing
-			// shall set both default and used pmic to PMIC_UNKNOW
-			break;
-		default:
-			ERR("Error! Unsupported PMIC for pv_comp!\n");
-			break;
-	}
+	PMIC_DVFS_OPS_SWITCH_AUTOGEN(pmic_id, dvfs_ops)
 
 	return dvfs_ops;
 }
 
+static void apply_pv_comp(const dvfs_ops_t *ops, int pll_freq, int leakage_info,
+			  int (*get_volt_from_dvfs)(int, int),
+			  int (*get_reg_volt)(void),
+			  int (*set_reg_volt)(int, int),
+			  const char *rail_name)
+{
+	int final_volt = 0, default_volt = 0;
+	int ret;
+
+	if (ops->init != NULL) {
+		ret = ops->init();
+		if (ret != S_OK)
+			ERR("WARN: pv_comp %s PMIC init fail!\n", rail_name);
+	}
+
+	ret = get_volt_from_dvfs(pll_freq, leakage_info);
+	if (ret != -1) {
+		final_volt = ret;
+	} else {
+		ERR("Failed to parse valid %s from PVComp table!\n", rail_name);
+		return;
+	}
+
+	if (!ops->pwm_type) {
+		default_volt = get_reg_volt();
+		if (default_volt < 0) {
+			ERR("Failed to get current %s!\n", rail_name);
+			return;
+		}
+
+		if (default_volt == final_volt) {
+			NOTICE("%s is %duV, default setting by hardware.\n", rail_name, default_volt);
+			return;
+		}
+	}
+
+	ret = set_reg_volt(default_volt, final_volt);
+	if (ret) {
+		if (ops->pwm_type)
+			ERR("Failed to set %s to %duv\n", rail_name, final_volt);
+		else
+			ERR("Failed to set %s from %duv to %duv\n", rail_name, default_volt, final_volt);
+	} else {
+		if (ops->pwm_type)
+			NOTICE("set %s to %duv\n", rail_name, final_volt);
+		else
+			NOTICE("set %s from %duv to %duv\n", rail_name, default_volt, final_volt);
+	}
+}
 
 void pv_comp(int cpu_pll, int gpu_pll)
 {
@@ -349,8 +354,6 @@ void pv_comp(int cpu_pll, int gpu_pll)
 	const dvfs_ops_t * vcore_dvfs_ops = NULL;
 	unsigned int vcpu_pmic_id, vcore_pmic_id;
 	int leakage_info = 0;
-	int volt = 0, final_volt = 0, default_volt = 0;;
-	int ret = 0;
 
 	vcpu_pmic_id = get_pmic_id(PMIC_SOC_VCPU);
 	vcore_pmic_id = get_pmic_id(PMIC_SOC_VCORE);
@@ -358,80 +361,29 @@ void pv_comp(int cpu_pll, int gpu_pll)
 	vcore_dvfs_ops = get_dvfs_ops(vcore_pmic_id);
 
 	leakage_info = get_leakage_info();
-	if(!leakage_info) {
+	if (!leakage_info) {
 		ERR("leakage is not present, skip pv_comp !!!!\n");
 		return;
 	}
 
-	if (vcpu_pmic_id != PMIC_UNKNOW)
-	{
-		if (vcpu_dvfs_ops->init != NULL){
-			ret = vcpu_dvfs_ops->init();
-			if (ret != S_OK)
-				ERR("WARN: pv_comp PMIC init fail!\n");
-		}
+	if (vcpu_dvfs_ops == NULL)
+		ERR("skip vcpu pv_comp !!!!\n");
+	if (vcore_dvfs_ops == NULL)
+		ERR("skip vcore pv_comp !!!!\n");
 
-		volt = get_vcpu_volt_from_dvfs(cpu_pll, leakage_info);
-		if(volt != -1)
-			final_volt = volt;
-		else {
-			ERR("Failed to parse valid vcpu from PVComp table !\n");
-			goto set_vcore;
-		}
-
-		default_volt = vcpu_dvfs_ops->get_vcpu_volt();
-		if(default_volt < 0) {
-			ERR("Failed to get current Vcpu! \n");
-			return ;
-		}
-
-		volt = default_volt;
-		if(volt == final_volt) {
-			NOTICE("Vcpu is %duV, default setting by hardware. \n",volt);
-		} else {
-			ret = vcpu_dvfs_ops->set_vcpu_volt(default_volt, final_volt);
-			if(ret)
-				ERR("Failed to set Vcpu from %duv to %duv\n", default_volt, final_volt);
-			else
-				NOTICE("set Vcpu from %duv to %duv\n", default_volt, final_volt);
-		}
+	if (vcpu_pmic_id != PMIC_UNKNOW && vcpu_dvfs_ops != NULL) {
+		apply_pv_comp(vcpu_dvfs_ops, cpu_pll, leakage_info,
+			      get_vcpu_volt_from_dvfs,
+			      vcpu_dvfs_ops->get_vcpu_volt,
+			      vcpu_dvfs_ops->set_vcpu_volt,
+			      "Vcpu");
 	}
 
-set_vcore:
-	if (vcore_pmic_id != PMIC_UNKNOW)
-	{
-		if (vcore_dvfs_ops->init != NULL){
-			ret = vcore_dvfs_ops->init();
-			if (ret != S_OK)
-				ERR("WARN: pv_comp PMIC init fail!\n");
-		}
-
-		volt = get_vcore_volt_from_dvfs(gpu_pll, leakage_info);
-		if(volt != -1)
-			final_volt = volt;
-		else {
-			ERR("Failed to parse valid vcore from PVComp table !\n");
-			return;
-		}
-
-		default_volt = vcore_dvfs_ops->get_vcore_volt();
-		if(default_volt < 0) {
-			ERR("Failed to get current Vcore! \n");
-			return;
-		}
-
-		volt = default_volt;
-		if(volt == final_volt) {
-			NOTICE("Vcore is %duV, default setting by hardware. \n", volt);
-		} else {
-			ret = vcore_dvfs_ops->set_vcore_volt(default_volt, final_volt);
-			if(ret) {
-				ERR("Failed to set Vcore from %duv to %duv\n", default_volt, final_volt);
-			} else {
-				NOTICE("set Vcore from %duv to %duv\n", default_volt, final_volt);
-			}
-		}
+	if (vcore_pmic_id != PMIC_UNKNOW && vcore_dvfs_ops != NULL) {
+		apply_pv_comp(vcore_dvfs_ops, gpu_pll, leakage_info,
+			      get_vcore_volt_from_dvfs,
+			      vcore_dvfs_ops->get_vcore_volt,
+			      vcore_dvfs_ops->set_vcore_volt,
+			      "Vcore");
 	}
-
-	return ;
 }

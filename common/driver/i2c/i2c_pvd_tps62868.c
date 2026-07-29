@@ -218,7 +218,7 @@ static int i2c_set_vcore_volt(int from, int to)
 	return i2c_set_volt(vout_core_id, from ,to);
 }
 
-const dvfs_ops_t TPS62868_ops = {
+const dvfs_ops_t tps62868_ops = {
 	.get_vcpu_volt = i2c_get_cpu_volt,
 	.get_vcore_volt = i2c_get_core_volt,
 	.set_vcpu_volt = i2c_set_vcpu_volt,

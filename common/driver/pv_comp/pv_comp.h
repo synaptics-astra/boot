@@ -42,6 +42,7 @@ typedef struct dvfs_ops {
 	int (* set_vcpu_volt)(int from, int to);
 	int (* set_vcore_volt)(int from, int to);
 	int (* init)(void);
+	unsigned char pwm_type;
 }dvfs_ops_t;
 
 
@@ -51,10 +52,11 @@ extern const dvfs_ops_t sy8827n_ops;
 extern const dvfs_ops_t ncp6335d_ops;
 extern const dvfs_ops_t mp886x_ops;
 extern const dvfs_ops_t hl7593_ops;
-extern const dvfs_ops_t TPS62868_ops;
+extern const dvfs_ops_t tps62868_ops;
 extern const dvfs_ops_t rt5739_ops;
-extern const dvfs_ops_t fp6359_ops;
-extern const dvfs_ops_t TPS6287X_ops;
+extern const dvfs_ops_t pwm_pmic_ops;
+extern const dvfs_ops_t tps6287x_ops;
+extern const dvfs_ops_t smtimer_ops;
 
 int get_vcpu_opp(unsigned int *opp);
 

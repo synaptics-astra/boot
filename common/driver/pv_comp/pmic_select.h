@@ -35,21 +35,9 @@
 #define _PMIC_SELECT_H_
 
 #include "com_type.h"
+#include "../pmic/pmic_autogen.h"
 
-typedef enum {
-	/* for PMIC ID */
-	M88PG86X,
-	SY8824B,
-	NCP6335D,
-	MP886X,
-	SY8827N,
-	HL7593WL06,
-	TPS62868,
-	RT5739,
-	FP6359,
-	TPS6287X,
-	PMIC_UNKNOW,
-}PMIC_CHIP_SELECTION;
+typedef PMIC_CHIP_SELECTION_AUTOGEN PMIC_CHIP_SELECTION;
 
 typedef enum {
 	PMIC_SOC_VCPU,

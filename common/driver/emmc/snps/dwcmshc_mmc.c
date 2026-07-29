@@ -117,7 +117,7 @@
 #define INTERNAL_CLK_STABLE (1 << 1)
 #define SD_CLK_EN           (1 << 2)
 #define UPPER_FREQ_SEL      (3 << 6)
-#define FREQ_SEL            (0xf << 8)
+#define FREQ_SEL            (0xff << 8)
 
 #define TOUT_CTRL_R  0x2e
 #define TOUT_CNT    (0xf << 0)
@@ -607,11 +607,14 @@ void emmc_init(struct mmc_device_info *dev_info)
 	phy_config(dev_info);
 	phy_deassert_reset(dev_info);
 	/* From DIAG */
-	phy_delayline_setup(EMMC_TX_DELAY_CODE, 0);
+	if (dev_info->mmc_dev_type == MMC_IS_EMMC)
+		phy_delayline_setup(EMMC_TX_DELAY_CODE, 0);
+	else if (dev_info->mmc_dev_type == MMC_IS_SD)
+		phy_delayline_setup(SD_TX_DELAY_CODE, 0);
 	phy_tuning_setup();
 #endif
 	set_controller_voltage(dev_info);
-	dwcmshc_host_clock_setup(SDCLK_SEL_DIV_1024);
+	dwcmshc_set_ios(400000, MMC_BUS_WIDTH_1);
 
 	/* Set Read Response Timeout,0xE - TMCLK x 2^27 */
 	val = mmc_readl(CLK_CTRL_R);
@@ -1071,7 +1074,10 @@ static int dwcmshc_set_ios(unsigned int clk, unsigned int width)
 		break;
 
 		default:
-			dwcmshc_host_clock_setup(MMC_SRC_CLK_RATE_IN_MHZ / (2 * clk));
+			if (dwcmshc_params.mmc_dev_type == MMC_IS_EMMC)
+				dwcmshc_host_clock_setup(MMC_SRC_CLK_RATE / (2 * clk));
+			else
+				dwcmshc_host_clock_setup(SD_SRC_CLK_RATE / (2 * clk));
 		break;
 
 	}
@@ -1180,7 +1186,7 @@ int do_emmcinit(int dev)
 
 	if (dev == 1) {
 		ptr_params->reg_base = MEMMAP_SDIO3_REG_BASE;
-		ptr_params->clk_rate = 50; // 50MHz: high speed
+		ptr_params->clk_rate = 50000000; // 50MHz: high speed
 		ptr_params->bus_width = MMC_BUS_WIDTH_4;
 		ptr_params->flags = MMC_FLAG_CMD23; //set block count for UHS104 card
 		ptr_info->mmc_dev_type = MMC_IS_SD;
@@ -1189,7 +1195,7 @@ int do_emmcinit(int dev)
 		sdio_setup();
 	} else {
 		ptr_params->reg_base = MEMMAP_EMMC_REG_BASE;
-		ptr_params->clk_rate = 50; // 50MHz: high speed
+		ptr_params->clk_rate = 50000000; // 50MHz: high speed
 		ptr_params->bus_width = EMMC_BUS_WIDTH;
 		ptr_params->flags = MMC_FLAG_CMD23;
 		ptr_info->mmc_dev_type = MMC_IS_EMMC;
@@ -1203,6 +1209,8 @@ int do_emmcinit(int dev)
 #if defined(CONFIG_DWCMSHC_PHY_SUPPORT)
 	if (EMMC_TX_INIT_DELAY_CODE != 0 && MMC_IS_EMMC == ptr_info->mmc_dev_type)
 		phy_delayline_setup(EMMC_TX_INIT_DELAY_CODE, 0);
+	else if (SD_TX_INIT_DELAY_CODE != 0 && MMC_IS_SD == ptr_info->mmc_dev_type)
+		phy_delayline_setup(SD_TX_INIT_DELAY_CODE, 0);
 #endif
 
 #ifdef MMC_DEBUG

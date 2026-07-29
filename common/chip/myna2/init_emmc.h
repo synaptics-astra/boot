@@ -36,11 +36,17 @@
 #define _INIT_EMMC_H_
 #include "mmc.h"
 
-#define MMC_SRC_CLK_RATE_IN_MHZ (200) /* 200MHz:from T2 clock */
+#define MMC_SRC_CLK_RATE (200000000) /* 200MHz:from T2 clock */
 
 /* EMMC TX delay code*/
-#define EMMC_TX_INIT_DELAY_CODE 0
-#define EMMC_TX_DELAY_CODE 26
+#define EMMC_TX_INIT_DELAY_CODE 80
+#define EMMC_TX_DELAY_CODE 80
+
+#define SD_SRC_CLK_RATE (200000000) /* 200MHz:from T2 clock */
+
+/* SD TX delay code*/
+#define SD_TX_INIT_DELAY_CODE 35
+#define SD_TX_DELAY_CODE 127
 
 void phy_deassert_global_reset(struct mmc_device_info *dev_info);
 int sdio_setup(void);
