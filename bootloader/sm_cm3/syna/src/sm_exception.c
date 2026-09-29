@@ -39,13 +39,12 @@
 
 #include "sm_exception.h"
 
-#define ISR_FUNC_START	(&__isr_descs_start__)
-#define ISR_FUNC_END	(&__isr_descs_end__)
+#define ISR_FUNC_START	(__isr_descs_start__)
+#define ISR_FUNC_END	(__isr_descs_end__)
 
 static isr_desc_t * isr_descs;
 
-#define ISR_FUNC_DESCS_NUM		(((unsigned int)ISR_FUNC_END - (unsigned int)ISR_FUNC_START)\
-					/ sizeof(isr_desc_t))
+#define ISR_FUNC_DESCS_NUM		(ISR_FUNC_END - ISR_FUNC_START)
 
 
 static int is_isr_happen(unsigned low, unsigned high, unsigned int index)
@@ -78,7 +77,7 @@ void IRQ_1_Handler(void)
     BFM_HOST_Bus_Read32(APB_ICTL_IRQ_FINALSTATUS_L, &irqs_low);
     BFM_HOST_Bus_Read32(APB_ICTL_IRQ_FINALSTATUS_H, &irqs_high);
 
-	isr_descs = (isr_desc_t *)ISR_FUNC_START;
+	isr_descs = ISR_FUNC_START;
 	for(i = 0; i < ISR_FUNC_DESCS_NUM; i++) {
 		isr_desc = &isr_descs[i];
 		if(S_OK == is_isr_happen(irqs_low, irqs_high, isr_desc->index)) {

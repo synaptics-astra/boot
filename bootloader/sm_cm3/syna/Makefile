@@ -194,7 +194,7 @@ CFLAGS += \
 	  -I$(CUSTOM_DIR) \
 	  -I$(CUSTOM_DIR)/$(PLATFORM_VALID)
 
-CFLAGS += -Wall -Werror -nostdlib -fno-builtin -fno-stack-protector -O2 -U_FORTIFY_SOURCE
+CFLAGS += -Wall -Werror -nostartfiles -nostdlib -fno-builtin -fno-stack-protector -O2 -U_FORTIFY_SOURCE
 
 #include $(BL_CHIP_DIR)/chipversions
 
@@ -207,7 +207,7 @@ CFLAGS += \
 	  -ffunction-sections -fdata-sections
 	  #-mlittle-endian -march=armv8-m.base -Os
 
-LDFLAGS := -nostdlib -nostartfiles --gc-sections
+LDFLAGS := -nostdlib --gc-sections
 
 ##################################################
 #

@@ -82,6 +82,16 @@ int parse_gpt_table(uint8_t part, struct gpt_hdr * hdr, struct gpt_ent * entry)
 	unsigned int num;
 	struct uuid	unused;
 
+	if(memcmp(hdr->hdr_sig, GPT_HDR_SIG, 8) || hdr->hdr_revision != GPT_HDR_REVISION) {
+		ERR("gpt header data corrupted at part %d!\n", part);
+		return -1;
+	}
+
+	if (hdr->hdr_size > MAX_HDR_SIZE) {
+		ERR("gpt hdr size too large at part %d!\n", part);
+		return -1;
+	}
+
 	num = (MAX_GPT_ENTRY - gptes.num) > hdr->hdr_entries ? hdr->hdr_entries : (MAX_GPT_ENTRY - gptes.num);
 
 	memset(&unused, 0, sizeof(unused));
@@ -130,75 +140,40 @@ int get_gpt(void * tbuff)
 {
 	//we need a buff that is at least 64bytes aligned address because of the DMA of EMMC
 	unsigned char * buff = (unsigned char *)(uintmax_t)get_aligned((unsigned)(uintmax_t)tbuff, 64);
-	int ret = 0;
 	long long start = START_ADDR_GPT;
 	struct gpt_hdr * hdr = NULL;
 	struct gpt_ent * entry = NULL;
 	int i = 0;
+	int part = 0;
 
-//primary_gpt:
-	//emmc only now
-	if(read_flash_from_part(0, start, GPT_PRI_READ_SIZE, buff) != 0) {
-		ERR("read primary gpt error\n");
-		goto alt_gpt;
-	}
+	for (i = 0; i < 5; i++) {
+		part = i? 3+i: i;
 
-	hdr = (struct gpt_hdr *)(buff + GPT_HEADER_OFFSET);
-	entry = (struct gpt_ent *)(buff + GPT_TABLE_OFFSET);
-
-	//signature = buff + 0x4800;
-	//FIXME: verify will be implemented later
-
-	goto gpt_load_done;
-alt_gpt:
-	start = get_flash_capacity() - GPT_ALT_READ_SIZE;//at the last 16.5K of emmc user area
-
-	if(read_flash_from_part(0, start, GPT_ALT_READ_SIZE, buff) != 0) {
-		ERR("read alt gpt error\n");
-		goto gpt_err;
-	}
-	hdr = (struct gpt_hdr *)(buff + GPT_PART_SIZE);
-	entry = (struct gpt_ent *)(buff);
-
-gpt_load_done:
-	//GPT Integrity Check
-	if(memcmp(hdr->hdr_sig, GPT_HDR_SIG, 8) || hdr->hdr_revision != GPT_HDR_REVISION) {
-		ERR("gpt header data corrupted!\n");
-		return FLASH_OP_ERR;
-	}
-
-	if (hdr->hdr_size > MAX_HDR_SIZE) {
-		ERR("hdr size too large!\n");
-		return FLASH_OP_ERR;
-	}
-
-	//crc verification
-
-	ret = parse_gpt_table(0, hdr, entry);
-
-	if(ret != 0) {
-		ERR("parse partiton info error\n");
-	}
-
-	//eMMC only, check 4 GPPs
-	start = START_ADDR_GPT;
-	for (i = 0; i < 4; i++) {
-		if(read_flash_from_part(4 + i, start, GPT_ALT_READ_SIZE, buff) == 0) {
-			hdr = (struct gpt_hdr *)(buff + GPT_HEADER_OFFSET);
-			entry = (struct gpt_ent *)(buff + GPT_TABLE_OFFSET);
-
-			if(memcmp(hdr->hdr_sig, GPT_HDR_SIG, 8) || hdr->hdr_revision != GPT_HDR_REVISION) {
-				ERR("gpt header data corrupted!\n");
-				continue;
-			}
-
-			if (hdr->hdr_size > MAX_HDR_SIZE) {
-				ERR("hdr size too large!\n");
-				continue;
-			}
-			parse_gpt_table(4 + i, hdr, entry);
-		} else {
+		/* Primary GPT */
+		start = START_ADDR_GPT;
+		if(read_flash_from_part(part, start, GPT_PRI_READ_SIZE, buff) != 0) {
+			INFO("read primary gpt error at part %d\n", part);
 			break;
+		}
+
+		hdr = (struct gpt_hdr *)(buff + GPT_HEADER_OFFSET);
+		entry = (struct gpt_ent *)(buff + GPT_TABLE_OFFSET);
+
+		if (parse_gpt_table(part, hdr, entry) == 0)
+			continue;
+
+		if (part == 0) {
+			/* Backup GPT */
+			ERR("Trying Backup GPT\n");
+			start = get_flash_capacity() - GPT_ALT_READ_SIZE;//at the last 16.5K of emmc user area
+			if(read_flash_from_part(part, start, GPT_ALT_READ_SIZE, buff) != 0) {
+				INFO("read alt gpt error at part %d\n", part);
+				break;
+			}
+
+			hdr = (struct gpt_hdr *)(buff + GPT_PART_SIZE);
+			entry = (struct gpt_ent *)(buff);
+			parse_gpt_table(part, hdr, entry);
 		}
 	}
 
@@ -206,10 +181,6 @@ gpt_load_done:
 			return -1;
 
 	return 0;
-
-gpt_err:
-	ERR("both primary and alt gpt are wrong!\n");
-	return FLASH_OP_ERR;
 }
 
 static void gpt_convert_efi_name_to_char(char *s, const uint16_t *ent_name, int n)

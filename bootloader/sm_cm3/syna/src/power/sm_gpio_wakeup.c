@@ -132,7 +132,7 @@ void __attribute__((used)) sm_gpio_isr(int port)
 static void sm_gpio_timer_isr(TimerHandle_t xtimer)
 {
     gpio_isr_desc_t *gpioisrd = get_gpio_isr_desc(current_port);
-    gpio_wakeup_desc_t *gpio_wakeup_desc = (gpio_wakeup_desc_t *)GPIO_WAKEUP_DESCS_START;;
+    gpio_wakeup_desc_t *gpio_wakeup_desc = GPIO_WAKEUP_DESCS_START;;
     unsigned int edge = ((gpioisrd->polarity == FALLING_EDGE) ?  RISING_EDGE : FALLING_EDGE);
     int wakeup_source = -1;
     int i = 0;

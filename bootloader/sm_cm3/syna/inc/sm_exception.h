@@ -50,7 +50,7 @@ typedef struct isr_desc {
 			.index = _index, \
 			.isr_handler = _isr_handler }
 
-extern unsigned int __isr_descs_start__;
-extern unsigned int __isr_descs_end__;
+extern isr_desc_t __isr_descs_start__[];
+extern isr_desc_t __isr_descs_end__[];
 
 #endif

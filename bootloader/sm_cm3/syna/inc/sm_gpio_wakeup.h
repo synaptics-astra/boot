@@ -61,14 +61,13 @@
             .has_payload = _has, \
             .payload = _payload}
 
-extern unsigned int __gpio_wakeup_descs_start__;
-extern unsigned int __gpio_wakeup_descs_end__;
+extern gpio_wakeup_desc_t __gpio_wakeup_descs_start__[];
+extern gpio_wakeup_desc_t __gpio_wakeup_descs_end__[];
 
-#define GPIO_WAKEUP_DESCS_START	(&__gpio_wakeup_descs_start__)
-#define GPIO_WAKEUP_DESCS_END	(&__gpio_wakeup_descs_end__)
+#define GPIO_WAKEUP_DESCS_START	(__gpio_wakeup_descs_start__)
+#define GPIO_WAKEUP_DESCS_END	(__gpio_wakeup_descs_end__)
 
-#define GPIO_WAKEUP_DESCS_NUM		(((unsigned int)GPIO_WAKEUP_DESCS_END - (unsigned int)GPIO_WAKEUP_DESCS_START)\
-					/ sizeof(gpio_wakeup_desc_t))
+#define GPIO_WAKEUP_DESCS_NUM		(GPIO_WAKEUP_DESCS_END - GPIO_WAKEUP_DESCS_START)
 
 void sm_gpio_isr(int port);
 
