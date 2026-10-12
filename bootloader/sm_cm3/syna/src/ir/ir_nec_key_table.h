@@ -48,7 +48,7 @@ static ir_key_table_t vendor_ir_nec_table[] = {
 	{0, 0xffffffff, 0xe11eff00, MV_IR_KEY_OPENCLOSE},
 
 	{0, 0xffffffff, 0xfc03ff00, MV_IR_KEY_DISCMENU},
-	{0, 0xffffffff, 0xf807ff00, MV_IR_KEY_TITLEMENU},
+	{0, 0xffffffff, 0xf807ff00, MV_IR_KEY_CUSTOM0},	/* blank key 1 */
 	{0, 0xffffffff, 0xbf40ff00, MV_IR_KEY_SUBTITLE},
 	{0, 0xffffffff, 0xbb44ff00, MV_IR_KEY_ANGLE},
 
@@ -81,7 +81,7 @@ static ir_key_table_t vendor_ir_nec_table[] = {
 	{0, 0xffffffff, 0x8b74ff00, MV_IR_KEY_BOOKMARKS},
 
 	{0, 0xffffffff, 0xbc43ff00, MV_IR_KEY_HOME},
-	{0, 0xffffffff, 0xa55aff00, MV_IR_KEY_TITLEMENU},
+	{0, 0xffffffff, 0xa55aff00, MV_IR_KEY_CUSTOM1},	/* blank key 2 */
 
 	{0, 0xffffffff, 0xb04fff00, MV_IR_KEY_UP},
 	{0, 0xffffffff, 0xa857ff00, MV_IR_KEY_DOWN},

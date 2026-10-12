@@ -482,6 +482,29 @@ void phy_config(struct mmc_device_info *dev_info)
 	val = mmc_readl(gen_setting->reg);
 	val &= ~(gen_setting->mask);
 	val |= gen_setting->setting;
+
+	if (dev_info->mmc_dev_type == MMC_IS_EMMC) {
+#if defined(EMMC_PHY_PAD_SP)
+		val &= ~(0xf << 16);
+		val |= (EMMC_PHY_PAD_SP & 0xFF) << 16;
+#endif
+
+#if defined(EMMC_PHY_PAD_SN)
+		val &= ~(0xf << 20);
+		val |= (EMMC_PHY_PAD_SN & 0xFF) << 20;
+#endif
+	}
+	if (dev_info->mmc_dev_type == MMC_IS_SD) {
+#if defined(SD_PHY_PAD_SP)
+		val &= ~(0xf << 16);
+		val |= (SD_PHY_PAD_SP & 0xFF) << 16;
+#endif
+
+#if defined(SD_PHY_PAD_SN)
+		val &= ~(0xf << 20);
+		val |= (SD_PHY_PAD_SP & 0xFF) << 20;
+#endif
+	}
 	mmc_writel(val, gen_setting->reg);
 
 	for (i = 0; i < PHY_PAD_SETTING_NUM; i++) {

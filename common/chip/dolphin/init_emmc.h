@@ -44,6 +44,10 @@
 
 #define SD_SRC_CLK_RATE (200000000) /* 200MHz:from T2 clock */
 
+/* SD drive strength */
+#define SD_PHY_PAD_SN 12
+#define SD_PHY_PAD_SP 12
+
 /* SD TX delay code*/
 #define SD_TX_INIT_DELAY_CODE 35
 #define SD_TX_DELAY_CODE 127

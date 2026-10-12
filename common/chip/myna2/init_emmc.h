@@ -38,6 +38,10 @@
 
 #define MMC_SRC_CLK_RATE (200000000) /* 200MHz:from T2 clock */
 
+/* EMMC drive strength */
+#define EMMC_PHY_PAD_SN 12
+#define EMMC_PHY_PAD_SP 12
+
 /* EMMC TX delay code*/
 #define EMMC_TX_INIT_DELAY_CODE 80
 #define EMMC_TX_DELAY_CODE 80
